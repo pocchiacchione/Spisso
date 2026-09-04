@@ -1,0 +1,306 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&family=Space+Mono:wght@700&display=swap');
+
+:root{
+  --navy: #0f1b2d;
+  --sea: #16344a;
+  --sun: #e8703f;
+  --sun-soft: #f2a56f;
+  --sand: #f3e6d0;
+  --olive: #8a9463;
+  --line: rgba(243,230,208,0.18);
+}
+
+*{ box-sizing: border-box; }
+
+body{
+  margin:0;
+  background: var(--navy);
+  color: var(--sand);
+  font-family: 'Inter', sans-serif;
+  line-height: 1.5;
+}
+
+a{ color: inherit; }
+
+.wrap{
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 28px 20px 80px;
+}
+
+/* ---------- Header / dial ---------- */
+
+.station-header{
+  display:flex;
+  align-items:center;
+  gap:18px;
+  margin-bottom: 34px;
+}
+
+.dial{
+  flex-shrink:0;
+}
+
+.station-name{
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight:700;
+  font-size: 1.7rem;
+  margin:0;
+  letter-spacing: -0.01em;
+}
+
+.frequency{
+  font-family: 'Space Mono', monospace;
+  color: var(--sun-soft);
+  font-size: 1rem;
+  margin-top: 2px;
+}
+
+/* ---------- Song of the day ---------- */
+
+.today-card{
+  background: linear-gradient(155deg, var(--sea), #102638);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 22px;
+  margin-bottom: 30px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 16px;
+}
+
+.today-card .label{
+  color: var(--sun-soft);
+  font-size: 0.85rem;
+  margin: 0 0 6px;
+}
+
+.today-card h2{
+  font-family:'Space Grotesk', sans-serif;
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.play-button{
+  background: var(--sun);
+  color: var(--navy);
+  border:none;
+  border-radius: 50%;
+  width: 54px;
+  height: 54px;
+  font-size: 1.3rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  text-decoration:none;
+  flex-shrink:0;
+  transition: transform 0.15s ease;
+}
+.play-button:hover{ transform: scale(1.06); }
+
+/* ---------- Unlock box ---------- */
+
+.unlock-box{
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  padding: 18px 20px;
+  margin-bottom: 32px;
+}
+
+.unlock-box h3{
+  font-family:'Space Grotesk', sans-serif;
+  margin: 0 0 4px;
+  font-size: 1.05rem;
+}
+
+.unlock-box p{
+  margin: 0 0 12px;
+  font-size: 0.9rem;
+  color: rgba(243,230,208,0.75);
+}
+
+.unlock-form{
+  display:flex;
+  gap: 10px;
+}
+
+.unlock-form input{
+  flex:1;
+  background: rgba(243,230,208,0.06);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--sand);
+  font-size: 0.95rem;
+}
+.unlock-form input:focus{ outline: 1px solid var(--sun-soft); }
+
+.unlock-form button{
+  background: var(--olive);
+  color: var(--navy);
+  border:none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.unlock-message{
+  margin-top: 10px;
+  font-size: 0.88rem;
+}
+.unlock-message.ok{ color: #b7d199; }
+.unlock-message.err{ color: #e29b8a; }
+
+/* ---------- Song list ---------- */
+
+.list-heading{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 1.05rem;
+  margin: 0 0 12px;
+  color: rgba(243,230,208,0.85);
+}
+
+.song-list{
+  border-top: 1px solid var(--line);
+}
+
+.song-row{
+  display:flex;
+  align-items:center;
+  gap: 14px;
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--line);
+  text-decoration:none;
+  color: var(--sand);
+}
+
+.song-row .num{
+  font-family:'Space Mono', monospace;
+  color: var(--sun-soft);
+  width: 26px;
+  flex-shrink:0;
+}
+
+.song-row .title{
+  flex:1;
+  font-size: 0.98rem;
+}
+
+.song-row .go{
+  color: rgba(243,230,208,0.5);
+  font-size: 0.85rem;
+}
+
+.song-row.locked{
+  opacity: 0.4;
+  pointer-events:none;
+}
+
+/* ---------- Player page ---------- */
+
+.player-card{
+  background: var(--sea);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 26px;
+  margin-top: 20px;
+}
+
+.player-title{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 1.4rem;
+  margin: 0 0 22px;
+}
+
+.transport{
+  display:flex;
+  align-items:center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.transport button{
+  background: var(--sun);
+  color: var(--navy);
+  border:none;
+  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  font-size: 1.2rem;
+  cursor:pointer;
+}
+
+.seek-row{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  flex:1;
+}
+
+.seek-row input[type="range"]{
+  flex:1;
+}
+
+.time{
+  font-family:'Space Mono', monospace;
+  font-size: 0.8rem;
+  color: rgba(243,230,208,0.7);
+  min-width: 40px;
+}
+
+.volume-row{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.volume-row span{ font-size: 0.85rem; color: rgba(243,230,208,0.6); }
+.volume-row input[type="range"]{ width: 110px; }
+
+.meta-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  margin-top: 6px;
+  font-size: 0.85rem;
+  color: rgba(243,230,208,0.6);
+}
+
+.actions{
+  display:flex;
+  justify-content:space-between;
+  margin-top: 22px;
+}
+
+.btn{
+  display:inline-block;
+  padding: 10px 16px;
+  border-radius: 8px;
+  text-decoration:none;
+  font-size: 0.9rem;
+  font-weight:600;
+}
+
+.btn.back{
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--sand);
+}
+
+.btn.youtube{
+  background: var(--sun);
+  color: var(--navy);
+}
+
+.hidden-player{
+  position:absolute;
+  width:1px;
+  height:1px;
+  overflow:hidden;
+  opacity:0;
+}

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Radio Salento 104.5</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="station-header">
+    <svg class="dial" width="56" height="56" viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="28" cy="28" r="26" stroke="#e8703f" stroke-width="2.5"/>
+      <circle cx="28" cy="28" r="3" fill="#e8703f"/>
+      <line x1="28" y1="28" x2="42" y2="16" stroke="#f3e6d0" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="28" cy="8" r="1.6" fill="#f3e6d0"/>
+      <circle cx="8" cy="28" r="1.6" fill="#f3e6d0" opacity="0.5"/>
+      <circle cx="48" cy="28" r="1.6" fill="#f3e6d0" opacity="0.5"/>
+      <circle cx="28" cy="48" r="1.6" fill="#f3e6d0" opacity="0.5"/>
+    </svg>
+    <div>
+      <h1 class="station-name">Radio Salento</h1>
+      <p class="frequency">104.5 FM</p>
+    </div>
+  </header>
+
+  <div class="today-card">
+    <div>
+      <p class="label">Canzone del giorno</p>
+      <h2 id="today-title">—</h2>
+    </div>
+    <a id="today-play" class="play-button" href="#" aria-label="Ascolta la canzone del giorno">&#9658;</a>
+  </div>
+
+  <section class="unlock-box">
+    <h3>Hai un codice?</h3>
+    <p>Inserisci il codice per sbloccare una canzone nascosta.</p>
+    <form class="unlock-form" id="unlock-form">
+      <input type="text" id="unlock-input" placeholder="Codice segreto" autocomplete="off">
+      <button type="submit">Sblocca</button>
+    </form>
+    <p class="unlock-message" id="unlock-message"></p>
+  </section>
+
+  <h3 class="list-heading">Tutte le canzoni</h3>
+  <div class="song-list" id="song-list"></div>
+
+</div>
+
+<script src="songs.js"></script>
+<script src="locked-songs.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
