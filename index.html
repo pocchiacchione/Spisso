@@ -65,8 +65,42 @@
 
 </div>
 
+<!-- Backdrop dietro al menu a tendina -->
+<div class="np-backdrop" id="np-backdrop"></div>
+
+<!-- Menu a tendina: si apre quando si clicca un brano -->
+<section class="np-panel" id="np-panel" aria-hidden="true">
+  <button class="np-panel-close" id="np-panel-close" aria-label="Chiudi il pannello">&#9660;</button>
+
+  <div class="np-panel-cover-wrap">
+    <div class="np-panel-cover-disc" id="np-panel-disc">
+      <img id="np-panel-cover" src="covers/default-cover.svg" alt="">
+    </div>
+  </div>
+
+  <p class="np-panel-eyebrow">In riproduzione</p>
+  <h2 class="np-panel-title" id="np-panel-title">—</h2>
+  <p class="np-panel-date" id="np-panel-date"></p>
+
+  <div class="np-panel-progress">
+    <span class="time" id="np-panel-cur">0:00</span>
+    <input type="range" id="np-panel-seek" value="0" min="0" max="100" step="0.1" aria-label="Posizione nel brano">
+    <span class="time" id="np-panel-dur">0:00</span>
+  </div>
+
+  <div class="np-panel-controls">
+    <button id="np-panel-prev" class="ctrl-btn" aria-label="Precedente">&#9198;</button>
+    <button id="np-panel-play" class="ctrl-btn play" aria-label="Blocca il brano">&#9658;</button>
+    <button id="np-panel-next" class="ctrl-btn" aria-label="Successivo">&#9197;</button>
+  </div>
+</section>
+
 <footer class="player-bar" id="player-bar">
-  <div class="np">
+  <button class="np-expand" id="np-expand" aria-label="Apri il menu a tendina" disabled>
+    <span class="chevron">&#9650;</span>
+  </button>
+
+  <div class="np" id="np-open-trigger">
     <img id="np-cover" src="covers/default-cover.svg" alt="">
     <div class="np-info">
       <div class="np-title" id="np-title">Nessun brano in riproduzione</div>
@@ -77,7 +111,7 @@
   <div class="transport">
     <div class="transport-buttons">
       <button id="prev-btn" class="ctrl-btn" aria-label="Precedente">&#9198;</button>
-      <button id="play-btn" class="ctrl-btn play" aria-label="Play/Pausa">&#9658;</button>
+      <button id="play-btn" class="ctrl-btn play" aria-label="Blocca il brano">&#9658;</button>
       <button id="next-btn" class="ctrl-btn" aria-label="Successivo">&#9197;</button>
     </div>
     <div class="progress-row">

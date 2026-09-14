@@ -26,6 +26,14 @@ html, body{
 a{ color: inherit; text-decoration: none; }
 button{ font-family: inherit; }
 
+button:focus-visible,
+a:focus-visible,
+.song-card:focus-visible,
+input:focus-visible{
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
+
 /* ---------- App shell ---------- */
 
 .app{
@@ -314,7 +322,7 @@ button{ font-family: inherit; }
   background: var(--panel);
   border-top: 1px solid var(--border);
   display:grid;
-  grid-template-columns: 1fr minmax(300px, 2fr) 1fr;
+  grid-template-columns: auto 1fr minmax(300px, 2fr) 1fr;
   align-items:center;
   padding: 0 16px;
   gap: 12px;
@@ -442,12 +450,189 @@ input[type="range"]:hover::-webkit-slider-thumb{ background: var(--green); }
 .volume-control input[type="range"]{ width: 110px; flex:none; }
 .volume-icon{ font-size: 1rem; color: var(--text-dim); }
 
+/* ---------- Pulsante per riaprire il menu a tendina (nella mini-barra) ---------- */
+
+.np-expand{
+  background:none;
+  border:none;
+  color: var(--text-dim);
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-shrink:0;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+.np-expand:hover:not(:disabled){ color: var(--text); background: var(--panel-hover); }
+.np-expand:disabled{ cursor:default; opacity: 0.3; }
+.np-expand .chevron{ display:inline-block; font-size: 0.85rem; transition: transform 0.2s ease; }
+.np-expand.is-open .chevron{ transform: rotate(180deg); }
+
+.np{ cursor:pointer; }
+
+/* ---------- Backdrop dietro al pannello a tendina ---------- */
+
+.np-backdrop{
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.55);
+  backdrop-filter: blur(2px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.25s ease;
+  z-index: 25;
+}
+.np-backdrop.is-visible{ opacity: 1; visibility: visible; }
+
+/* ---------- Pannello "menu a tendina" del brano in riproduzione ---------- */
+
+.np-panel{
+  position: fixed;
+  top: 0;
+  left: 50%;
+  width: min(92vw, 380px);
+  background: linear-gradient(160deg, #1b1b1b 0%, var(--panel) 60%);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 24px 48px rgba(0,0,0,0.55);
+  padding: 18px 24px 26px;
+  z-index: 30;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+
+  transform: translate(-50%, -110%);
+  opacity: 0;
+  visibility: hidden;
+  transition: transform 0.32s cubic-bezier(.2,.8,.2,1), opacity 0.28s ease;
+}
+.np-panel.is-open{
+  transform: translate(-50%, 0);
+  opacity: 1;
+  visibility: visible;
+}
+
+.np-panel-close{
+  align-self:center;
+  background: var(--panel-hover);
+  border:none;
+  color: var(--text-dim);
+  width: 30px;
+  height: 22px;
+  border-radius: 0 0 10px 10px;
+  margin: -18px 0 14px;
+  cursor:pointer;
+  transition: color 0.15s ease;
+}
+.np-panel-close:hover{ color: var(--text); }
+
+.np-panel-cover-wrap{ margin-bottom: 18px; }
+
+.np-panel-cover-disc{
+  width: 200px;
+  height: 200px;
+  border-radius: 16px;
+  overflow:hidden;
+  box-shadow: 0 14px 30px rgba(0,0,0,0.5);
+  transition: transform 0.4s ease;
+}
+.np-panel-cover-disc img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  background: var(--panel-hover);
+}
+.np-panel.is-playing .np-panel-cover-disc{
+  animation: np-cover-pulse 2.6s ease-in-out infinite;
+}
+@keyframes np-cover-pulse{
+  0%, 100%{ transform: scale(1); }
+  50%{ transform: scale(1.035); }
+}
+
+.np-panel-eyebrow{
+  color: var(--green);
+  font-weight:700;
+  font-size: 0.72rem;
+  text-transform: none;
+  letter-spacing: 0.02em;
+  margin: 0 0 6px;
+}
+
+.np-panel-title{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 1.3rem;
+  margin: 0 0 4px;
+  line-height: 1.25;
+}
+
+.np-panel-date{
+  font-size: 0.85rem;
+  color: var(--text-dim);
+  margin: 0 0 20px;
+}
+
+.np-panel-progress{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 18px;
+}
+.np-panel-progress .time{
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  min-width: 34px;
+}
+
+.np-panel-controls{
+  display:flex;
+  align-items:center;
+  gap: 26px;
+}
+.np-panel-controls .ctrl-btn{ font-size: 1.5rem; }
+.np-panel-controls .ctrl-btn.play{
+  width: 46px;
+  height: 46px;
+  font-size: 1.2rem;
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 860px){
   .sidebar{ display:none; }
-  .player-bar{ grid-template-columns: 1fr; height: auto; padding: 10px 12px; gap: 8px; }
-  .np{ justify-content:center; }
+  .player-bar{ grid-template-columns: auto 1fr; height: auto; padding: 10px 12px; gap: 8px; }
+  .player-bar .transport{ grid-column: 1 / -1; order: 3; }
+  .np{ justify-content:flex-start; }
   .volume-control{ display:none; }
   .song-grid{ grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; }
+  .np-panel{ top: 0; border-radius: 0 0 16px 16px; padding: 16px 18px 22px; }
+  .np-panel-cover-disc{ width: 160px; height: 160px; }
+}
+
+/* ---------- Grandi schermi da computer ---------- */
+
+@media (min-width: 1400px){
+  .content{ padding: 8px 56px 48px; }
+  .song-grid{ grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 24px; }
+  .hero h1{ font-size: clamp(2.2rem, 3.4vw, 3.6rem); }
+}
+
+@media (min-width: 1800px){
+  .app{ max-width: 1760px; margin: 0 auto; }
+}
+
+/* ---------- Accessibilità: rispetta le preferenze di movimento ridotto ---------- */
+
+@media (prefers-reduced-motion: reduce){
+  .np-panel, .np-backdrop, .np-panel-cover-disc, .np-expand .chevron{
+    transition: none !important;
+    animation: none !important;
+  }
 }

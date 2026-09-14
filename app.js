@@ -61,8 +61,27 @@ const heroTitle = document.getElementById("hero-title");
 const heroPlayBtn = document.getElementById("hero-play");
 const libraryCountEl = document.getElementById("library-count");
 
+// Menu a tendina (pannello "in riproduzione")
+const npPanel = document.getElementById("np-panel");
+const npBackdrop = document.getElementById("np-backdrop");
+const npExpandBtn = document.getElementById("np-expand");
+const npOpenTrigger = document.getElementById("np-open-trigger");
+const npPanelCloseBtn = document.getElementById("np-panel-close");
+const npPanelDisc = document.getElementById("np-panel-disc");
+const npPanelCover = document.getElementById("np-panel-cover");
+const npPanelTitle = document.getElementById("np-panel-title");
+const npPanelDate = document.getElementById("np-panel-date");
+const npPanelPlayBtn = document.getElementById("np-panel-play");
+const npPanelPrevBtn = document.getElementById("np-panel-prev");
+const npPanelNextBtn = document.getElementById("np-panel-next");
+const npPanelSeek = document.getElementById("np-panel-seek");
+const npPanelCur = document.getElementById("np-panel-cur");
+const npPanelDur = document.getElementById("np-panel-dur");
+
 let currentIndex = -1; // indice nella coda corrente (getQueue())
 let seekBeingDragged = false;
+let panelSeekBeingDragged = false;
+let panelOpen = false;
 
 /* ---------------- Rendering ---------------- */
 
@@ -70,7 +89,7 @@ function renderHero() {
   const queue = getQueue();
   const song = getSongOfTheDay(queue);
   heroTitle.textContent = song.title;
-  heroPlayBtn.onclick = () => playByQueueIndex(queue.indexOf(song));
+  heroPlayBtn.onclick = () => openNowPlaying(queue.indexOf(song));
 }
 
 function renderGrid() {
@@ -91,7 +110,7 @@ function renderGrid() {
       <p class="card-title">${song.title}</p>
       <p class="card-sub">Spisso</p>
     `;
-    card.addEventListener("click", () => playByQueueIndex(i));
+    card.addEventListener("click", () => openNowPlaying(i));
     gridEl.appendChild(card);
   });
 
@@ -133,12 +152,64 @@ function playByQueueIndex(index) {
     // non interagisce con la pagina: non è un errore bloccante.
   });
 
+  // Aggiorna sia la mini-barra in basso sia il pannello a tendina (se aperto
+  // o no, resta sempre sincronizzato col brano corrente), come richiesto:
+  // se si cambia canzone, il menu a tendina deve mostrare la nuova canzone.
   npTitle.textContent = song.title;
   npDate.textContent = formatDate(song.date);
   npCover.src = song.cover;
 
+  npPanelTitle.textContent = song.title;
+  npPanelDate.textContent = formatDate(song.date);
+  npPanelCover.src = song.cover;
+
+  npExpandBtn.disabled = false;
+
   highlightPlayingCard();
 }
+
+/* ---------------- Menu a tendina (pannello "in riproduzione") ---------------- */
+
+function openPanel() {
+  if (currentIndex === -1) return;
+  panelOpen = true;
+  npPanel.classList.add("is-open");
+  npPanel.setAttribute("aria-hidden", "false");
+  npBackdrop.classList.add("is-visible");
+  npExpandBtn.classList.add("is-open");
+  npExpandBtn.setAttribute("aria-label", "Chiudi il menu a tendina");
+}
+
+function closePanel() {
+  panelOpen = false;
+  npPanel.classList.remove("is-open");
+  npPanel.setAttribute("aria-hidden", "true");
+  npBackdrop.classList.remove("is-visible");
+  npExpandBtn.classList.remove("is-open");
+  npExpandBtn.setAttribute("aria-label", "Apri il menu a tendina");
+}
+
+function togglePanel() {
+  if (panelOpen) {
+    closePanel();
+  } else {
+    openPanel();
+  }
+}
+
+// Cliccare un brano (card o hero): riproduce E apre il menu a tendina
+// con la sua cover, come richiesto.
+function openNowPlaying(index) {
+  playByQueueIndex(index);
+  openPanel();
+}
+
+npExpandBtn.addEventListener("click", togglePanel);
+npOpenTrigger.addEventListener("click", () => {
+  if (currentIndex !== -1) togglePanel();
+});
+npPanelCloseBtn.addEventListener("click", closePanel);
+npBackdrop.addEventListener("click", closePanel);
 
 function togglePlayPause() {
   if (currentIndex === -1) {
@@ -169,30 +240,49 @@ function playPrev() {
 
 audioEl.addEventListener("play", () => {
   playBtn.innerHTML = "&#10074;&#10074;";
+  playBtn.setAttribute("aria-label", "Blocca il brano");
+  npPanelPlayBtn.innerHTML = "&#10074;&#10074;";
+  npPanelPlayBtn.setAttribute("aria-label", "Blocca il brano");
+  npPanel.classList.add("is-playing");
 });
 
 audioEl.addEventListener("pause", () => {
   playBtn.innerHTML = "&#9658;";
+  playBtn.setAttribute("aria-label", "Riproduci il brano");
+  npPanelPlayBtn.innerHTML = "&#9658;";
+  npPanelPlayBtn.setAttribute("aria-label", "Riproduci il brano");
+  npPanel.classList.remove("is-playing");
 });
 
 // Selezione automatica del brano successivo quando quello attuale finisce
+// (il pannello, se aperto, si aggiorna già da solo tramite playByQueueIndex)
 audioEl.addEventListener("ended", playNext);
 
 audioEl.addEventListener("loadedmetadata", () => {
   seekBar.max = audioEl.duration || 0;
   durTimeEl.textContent = formatTime(audioEl.duration);
+  npPanelSeek.max = audioEl.duration || 0;
+  npPanelDur.textContent = formatTime(audioEl.duration);
 });
 
 audioEl.addEventListener("timeupdate", () => {
   if (!seekBeingDragged) {
     seekBar.value = audioEl.currentTime;
   }
+  if (!panelSeekBeingDragged) {
+    npPanelSeek.value = audioEl.currentTime;
+  }
   curTimeEl.textContent = formatTime(audioEl.currentTime);
+  npPanelCur.textContent = formatTime(audioEl.currentTime);
 });
 
 playBtn.addEventListener("click", togglePlayPause);
 nextBtn.addEventListener("click", playNext);
 prevBtn.addEventListener("click", playPrev);
+
+npPanelPlayBtn.addEventListener("click", togglePlayPause);
+npPanelNextBtn.addEventListener("click", playNext);
+npPanelPrevBtn.addEventListener("click", playPrev);
 
 seekBar.addEventListener("mousedown", () => { seekBeingDragged = true; });
 seekBar.addEventListener("touchstart", () => { seekBeingDragged = true; });
@@ -202,6 +292,16 @@ seekBar.addEventListener("input", (e) => {
 seekBar.addEventListener("change", (e) => {
   audioEl.currentTime = Number(e.target.value);
   seekBeingDragged = false;
+});
+
+npPanelSeek.addEventListener("mousedown", () => { panelSeekBeingDragged = true; });
+npPanelSeek.addEventListener("touchstart", () => { panelSeekBeingDragged = true; });
+npPanelSeek.addEventListener("input", (e) => {
+  npPanelCur.textContent = formatTime(Number(e.target.value));
+});
+npPanelSeek.addEventListener("change", (e) => {
+  audioEl.currentTime = Number(e.target.value);
+  panelSeekBeingDragged = false;
 });
 
 volumeBar.addEventListener("input", (e) => {

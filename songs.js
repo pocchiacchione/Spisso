@@ -8,13 +8,6 @@
 
 const SONGS = [
   {
-    "id": "public-spisso-11092001",
-    "title": "SPISSO",
-    "date": "2001-09-11",
-    "audio": "audio/public/11-09-2001 - SPISSO.mp3",
-    "cover": "covers/default-cover.svg"
-  },
-  {
     "id": "public-sotto-il-sole-del-salento-12052024",
     "title": "Sotto il sole del Salento",
     "date": "2024-05-12",
