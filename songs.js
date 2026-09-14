@@ -1,32 +1,48 @@
 // songs.js
-// Qui c'è la lista delle canzoni sempre visibili sul sito.
-// Per aggiungerne una nuova, copia una riga e cambia i valori.
-// "url" deve essere un link YouTube normale (tipo https://www.youtube.com/watch?v=XXXXXXXXXXX)
-// "date" è la data che verrà mostrata nel lettore, formato AAAA-MM-GG
+// ⚠️ FILE GENERATO AUTOMATICAMENTE da scripts/generate-manifest.js
+// Non modificarlo a mano: le modifiche verranno sovrascritte.
+// Per aggiungere/rimuovere canzoni, metti i file audio in
+// audio/public (o audio/locked) seguendo il formato
+// "gg-mm-aaaa - Titolo.mp3" e rilancia lo script (o fai push:
+// la GitHub Action lo rilancia da sola).
 
 const SONGS = [
   {
-    id: "s1",
-    title: "Sotto il sole del Salento",
-    url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
-    date: "2024-05-12"
+    "id": "public-sotto-il-sole-del-salento-12052024",
+    "title": "Sotto il sole del Salento",
+    "date": "2024-05-12",
+    "audio": "audio/public/12-05-2024 - Sotto il sole del Salento.mp3",
+    "cover": "covers/public/12-05-2024 - Sotto il sole del Salento.jpg"
   },
   {
-    id: "s2",
-    title: "Notte di Pizzica",
-    url: "https://www.youtube.com/watch?v=oHg5SJYRHA0",
-    date: "2024-06-03"
+    "id": "public-notte-di-pizzica-03062024",
+    "title": "Notte di Pizzica",
+    "date": "2024-06-03",
+    "audio": "audio/public/03-06-2024 - Notte di Pizzica.mp3",
+    "cover": "covers/default-cover.svg"
   },
   {
-    id: "s3",
-    title: "Vento di Levante",
-    url: "https://www.youtube.com/watch?v=jNQXAC9IVRw",
-    date: "2024-07-19"
+    "id": "public-vento-di-levante-19072024",
+    "title": "Vento di Levante",
+    "date": "2024-07-19",
+    "audio": "audio/public/19-07-2024 - Vento di Levante.mp3",
+    "cover": "covers/public/19-07-2024 - Vento di Levante.jpg"
   },
   {
-    id: "s4",
-    title: "Mare a Mezzanotte",
-    url: "https://www.youtube.com/watch?v=ZZ5LpwO-An4",
-    date: "2024-08-01"
+    "id": "public-mare-a-mezzanotte-01082026",
+    "title": "Mare a Mezzanotte",
+    "date": "2026-08-01",
+    "audio": "audio/public/01-08-2026 - Mare a Mezzanotte.mp3",
+    "cover": "covers/default-cover.svg"
+  }
+];
+
+const LOCKED_SONGS = [
+  {
+    "id": "locked-segreto-di-gallipoli-10092024",
+    "title": "Segreto di Gallipoli",
+    "date": "2024-09-10",
+    "audio": "audio/locked/10-09-2024 - Segreto di Gallipoli.mp3",
+    "cover": "covers/default-cover.svg"
   }
 ];

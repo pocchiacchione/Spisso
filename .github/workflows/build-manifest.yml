@@ -1,0 +1,36 @@
+name: Aggiorna elenco canzoni
+
+# Si attiva ogni volta che aggiungi, rimuovi o rinomini file
+# dentro audio/ o covers/, e rigenera songs.js da solo.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "audio/**"
+      - "covers/**"
+      - "scripts/generate-manifest.js"
+
+permissions:
+  contents: write
+
+jobs:
+  build-manifest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scarica il repo
+        uses: actions/checkout@v4
+
+      - name: Genera songs.js dalle cartelle audio/covers
+        run: node scripts/generate-manifest.js
+
+      - name: Salva songs.js se è cambiato
+        run: |
+          git config user.name "spisso-bot"
+          git config user.email "actions@users.noreply.github.com"
+          if ! git diff --quiet songs.js; then
+            git add songs.js
+            git commit -m "Aggiorna songs.js (canzoni/copertine modificate)"
+            git push
+          else
+            echo "Nessuna modifica a songs.js"
+          fi
