@@ -2,6 +2,9 @@ name: Aggiorna elenco canzoni
 
 # Si attiva ogni volta che aggiungi, rimuovi o rinomini file
 # dentro audio/ o covers/, e rigenera songs.js da solo.
+# Puoi anche avviarla a mano dalla tab "Actions" del repo
+# (pulsante "Run workflow"), utile se per qualche motivo
+# non si avvia da sola dopo un push.
 on:
   push:
     branches: [main]
@@ -9,6 +12,7 @@ on:
       - "audio/**"
       - "covers/**"
       - "scripts/generate-manifest.js"
+  workflow_dispatch: {}
 
 permissions:
   contents: write
