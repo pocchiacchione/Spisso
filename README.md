@@ -10,11 +10,11 @@ e passaggio automatico al brano successivo a fine riproduzione.
 index.html      pagina unica del sito (home + player)
 style.css       stile Spotify (sidebar nera, verde, player in basso)
 app.js          logica del player e della libreria
-config.js       codice segreto per sbloccare i brani nascosti
+config.js       impostazioni dello sblocco dei brani nascosti
 songs.js        ⚠️ generato automaticamente — non modificare a mano
 
 audio/public/   file audio visibili a tutti
-audio/locked/   file audio nascosti, sbloccabili col codice segreto
+audio/locked/   file audio nascosti, sbloccabili indovinando il titolo
 covers/public/  copertine dei brani pubblici
 covers/locked/  copertine dei brani nascosti
 covers/default-cover.svg   copertina di riserva se manca quella specifica
@@ -44,11 +44,41 @@ La cartella `audio/` dentro il repository ottiene lo stesso risultato
 pratico (aggiungi un file, il sito si aggiorna) in modo sicuro, perché non
 richiede nessuna credenziale esposta pubblicamente.
 
-## Codice segreto
+## Come si sbloccano i brani nascosti
 
-Il codice per sbloccare i brani nascosti si trova in `config.js`
-(`UNLOCK_CODE`). Cambialo quando vuoi: non viene mai sovrascritto dallo
-script di generazione.
+Non c'è più un codice unico uguale per tutti: **ogni brano nascosto si
+sblocca scrivendo il suo titolo** nella casella in fondo alla sidebar.
+Basta anche **una sola parola del titolo**.
+
+Esempio, per il brano `Ludo e Fede` funzionano tutti questi:
+
+```
+Ludo e Fede      (titolo intero)
+Ludo             (una parola del titolo)
+fede             (maiuscole e accenti non contano)
+e Fede           (un pezzo del titolo)
+```
+
+Non funzionano invece le parole troppo corte o troppo comuni da sole
+(`e`, `il`, `di`...), per evitare sblocchi per caso, e le parole scritte
+a metà (`Lud`).
+
+Se una parola compare nel titolo di più brani nascosti, li sblocca tutti
+insieme.
+
+I brani sbloccati vengono **salvati sul dispositivo** (nel `localStorage`
+del browser), quindi restano sbloccati anche chiudendo o ricaricando il
+sito. Ogni dispositivo/browser ha il suo elenco.
+
+### Impostazioni in `config.js`
+
+- `MIN_UNLOCK_WORD_LENGTH` — lunghezza minima di una parola perché valga
+  come indizio (di default 3).
+- `UNLOCK_STOP_WORDS` — parole troppo comuni che da sole non sbloccano.
+- `MASTER_UNLOCK_CODE` — codice speciale che sblocca **tutti** i brani in
+  una volta (di default `piocheddar`). Metti `null` se non lo vuoi.
+
+`config.js` non viene mai sovrascritto dallo script di generazione.
 
 ## Provare il sito in locale
 

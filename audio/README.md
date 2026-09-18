@@ -1,7 +1,7 @@
 # Come aggiungere un brano
 
 Metti il file audio in **`audio/public/`** (visibile a tutti) oppure in
-**`audio/locked/`** (visibile solo a chi inserisce il codice segreto).
+**`audio/locked/`** (visibile solo a chi indovina il titolo del brano).
 
 ## Nome del file
 

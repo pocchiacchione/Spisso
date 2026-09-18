@@ -1,19 +1,123 @@
 // app.js — logica di Spisso (Spotify-style single page player)
 
-const STORAGE_KEY = "spisso_unlocked_count";
+// Chiave nuova: salva la LISTA degli id dei brani sbloccati, così i brani
+// restano sbloccati sul dispositivo anche chiudendo o ricaricando il sito.
+const STORAGE_KEY = "spisso_unlocked_ids";
+// Vecchia chiave (contava solo QUANTI brani erano sbloccati): la leggiamo
+// una volta sola per non far perdere i progressi a chi usava già il sito.
+const LEGACY_STORAGE_KEY = "spisso_unlocked_count";
 
-/* ---------------- Stato brani sbloccati ---------------- */
+/* ---------------- Stato brani sbloccati (salvato sul dispositivo) ---------------- */
 
-function getUnlockedCount() {
-  return parseInt(localStorage.getItem(STORAGE_KEY) || "0", 10);
+function readUnlockedIds() {
+  let ids = [];
+
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) ids = parsed.filter((x) => typeof x === "string");
+    } else {
+      // Migrazione dal vecchio sistema a conteggio
+      const legacy = parseInt(localStorage.getItem(LEGACY_STORAGE_KEY) || "0", 10);
+      if (legacy > 0) {
+        ids = LOCKED_SONGS.slice(0, legacy).map((s) => s.id);
+        writeUnlockedIds(ids);
+      }
+    }
+  } catch (err) {
+    // localStorage non disponibile (es. navigazione privata) o dati corrotti:
+    // il sito continua a funzionare, semplicemente senza salvataggio.
+    ids = [];
+  }
+
+  // Tiene solo gli id che esistono ancora in LOCKED_SONGS
+  const valid = new Set(LOCKED_SONGS.map((s) => s.id));
+  return ids.filter((id) => valid.has(id));
 }
 
-function setUnlockedCount(n) {
-  localStorage.setItem(STORAGE_KEY, String(n));
+function writeUnlockedIds(ids) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(ids));
+  } catch (err) {
+    // Salvataggio non possibile: si continua comunque per questa sessione.
+  }
+}
+
+// Set degli id sbloccati, tenuto in memoria e sempre sincronizzato col disco
+let unlockedIds = new Set(readUnlockedIds());
+
+function isUnlocked(song) {
+  return unlockedIds.has(song.id);
+}
+
+function unlockSong(song) {
+  if (unlockedIds.has(song.id)) return false;
+  unlockedIds.add(song.id);
+  // Salva rispettando l'ordine originale dei brani bloccati
+  writeUnlockedIds(LOCKED_SONGS.filter(isUnlocked).map((s) => s.id));
+  return true;
+}
+
+function getUnlockedCount() {
+  return LOCKED_SONGS.filter(isUnlocked).length;
 }
 
 function getUnlockedLockedSongs() {
-  return LOCKED_SONGS.slice(0, getUnlockedCount());
+  return LOCKED_SONGS.filter(isUnlocked);
+}
+
+/* ---------------- Riconoscimento del titolo scritto ---------------- */
+
+// Toglie maiuscole, accenti e punteggiatura: "Ludo e Fede!" -> "ludo e fede"
+function normalizeText(str) {
+  return String(str)
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function toWords(str) {
+  const n = normalizeText(str);
+  return n ? n.split(" ") : [];
+}
+
+// true se "guess" è il titolo intero, una parola del titolo
+// o un pezzo consecutivo del titolo (es. "e Fede" di "Ludo e Fede").
+function songMatchesGuess(song, guess) {
+  const titleWords = toWords(song.title);
+  const guessWords = toWords(guess);
+
+  if (!guessWords.length || !titleWords.length) return false;
+
+  // Titolo scritto per intero: va sempre bene
+  if (guessWords.join(" ") === titleWords.join(" ")) return true;
+
+  // Altrimenti serve almeno una parola "vera" (non troppo corta o comune),
+  // così scrivere solo "e" o "il" non sblocca niente.
+  const hasRealWord = guessWords.some(
+    (w) => w.length >= MIN_UNLOCK_WORD_LENGTH && !UNLOCK_STOP_WORDS.includes(w)
+  );
+  if (!hasRealWord) return false;
+
+  // Cerca le parole scritte, nello stesso ordine, dentro il titolo
+  for (let i = 0; i + guessWords.length <= titleWords.length; i++) {
+    let ok = true;
+    for (let j = 0; j < guessWords.length; j++) {
+      if (titleWords[i + j] !== guessWords[j]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return true;
+  }
+
+  return false;
+}
+
+function findSongsByGuess(guess) {
+  return LOCKED_SONGS.filter((song) => songMatchesGuess(song, guess));
 }
 
 // Elenco di TUTTI i brani attualmente visibili (pubblici + sbloccati),
@@ -79,6 +183,7 @@ const npPanelCur = document.getElementById("np-panel-cur");
 const npPanelDur = document.getElementById("np-panel-dur");
 
 let currentIndex = -1; // indice nella coda corrente (getQueue())
+let currentSong = null; // brano effettivamente in riproduzione
 let seekBeingDragged = false;
 let panelSeekBeingDragged = false;
 let panelOpen = false;
@@ -94,7 +199,7 @@ function renderHero() {
 
 function renderGrid() {
   const queue = getQueue();
-  const remainingLocked = LOCKED_SONGS.length - getUnlockedCount();
+  const remainingLocked = LOCKED_SONGS.filter((s) => !isUnlocked(s)).length;
 
   gridEl.innerHTML = "";
 
@@ -145,6 +250,7 @@ function playByQueueIndex(index) {
 
   currentIndex = index;
   const song = queue[index];
+  currentSong = song;
 
   audioEl.src = song.audio;
   audioEl.play().catch(() => {
@@ -311,33 +417,89 @@ audioEl.volume = Number(volumeBar.value) / 100;
 
 /* ---------------- Sblocco brani nascosti ---------------- */
 
+function showUnlockMessage(text, type) {
+  const messageEl = document.getElementById("unlock-message");
+  messageEl.textContent = text;
+  messageEl.className = "unlock-message " + type;
+}
+
 function handleUnlockSubmit(e) {
   e.preventDefault();
   const input = document.getElementById("unlock-input");
-  const messageEl = document.getElementById("unlock-message");
-  const code = input.value.trim().toLowerCase();
+  const guess = input.value.trim();
 
-  if (code !== UNLOCK_CODE.toLowerCase()) {
-    messageEl.textContent = "Codice non valido.";
-    messageEl.className = "unlock-message err";
+  if (!guess) {
+    showUnlockMessage("Scrivi il titolo di un brano.", "err");
     return;
   }
 
-  const current = getUnlockedCount();
-  if (current >= LOCKED_SONGS.length) {
-    messageEl.textContent = "Hai già sbloccato tutti i brani nascosti!";
-    messageEl.className = "unlock-message ok";
+  if (!LOCKED_SONGS.length) {
+    showUnlockMessage("Per ora non ci sono brani nascosti.", "err");
     return;
   }
 
-  const newSong = LOCKED_SONGS[current];
-  setUnlockedCount(current + 1);
-  messageEl.textContent = `Hai sbloccato "${newSong.title}"!`;
-  messageEl.className = "unlock-message ok";
+  // Codice speciale che sblocca tutto in una volta
+  if (
+    typeof MASTER_UNLOCK_CODE === "string" &&
+    MASTER_UNLOCK_CODE &&
+    normalizeText(guess) === normalizeText(MASTER_UNLOCK_CODE)
+  ) {
+    const nuovi = LOCKED_SONGS.filter((song) => unlockSong(song));
+    input.value = "";
+    refreshAfterUnlock();
+    showUnlockMessage(
+      nuovi.length
+        ? `Hai sbloccato tutti i brani nascosti (${nuovi.length} nuovi)!`
+        : "Hai già sbloccato tutti i brani nascosti!",
+      "ok"
+    );
+    return;
+  }
+
+  const matches = findSongsByGuess(guess);
+
+  if (!matches.length) {
+    showUnlockMessage("Nessun brano con questo titolo. Riprova!", "err");
+    return;
+  }
+
+  // Sblocca tutti i brani il cui titolo contiene quella parola
+  const nuovi = matches.filter((song) => unlockSong(song));
+
+  if (!nuovi.length) {
+    showUnlockMessage(
+      matches.length === 1
+        ? `"${matches[0].title}" l'avevi già sbloccato!`
+        : "Questi brani li avevi già sbloccati!",
+      "ok"
+    );
+    return;
+  }
+
   input.value = "";
+  refreshAfterUnlock();
 
+  showUnlockMessage(
+    nuovi.length === 1
+      ? `Hai sbloccato "${nuovi[0].title}"!`
+      : `Hai sbloccato ${nuovi.length} brani: ${nuovi.map((s) => `"${s.title}"`).join(", ")}!`,
+    "ok"
+  );
+}
+
+// Dopo uno sblocco la coda cambia: l'indice del brano in riproduzione
+// va ricalcolato, altrimenti "successivo/precedente" sbaglierebbe brano.
+function refreshAfterUnlock() {
+  const playingSong = currentSong;
   renderGrid();
   renderHero();
+  if (playingSong) {
+    const i = getQueue().findIndex((s) => s.id === playingSong.id);
+    if (i !== -1) {
+      currentIndex = i;
+      highlightPlayingCard();
+    }
+  }
 }
 
 document.getElementById("unlock-form").addEventListener("submit", handleUnlockSubmit);
