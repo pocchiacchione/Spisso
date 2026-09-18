@@ -25,11 +25,16 @@ scripts/generate-manifest.js   legge le cartelle audio/ e covers/ e genera songs
 
 ## Aggiungere un brano
 
-Vedi [`audio/README.md`](audio/README.md): in breve, il file audio va
-nominato `gg-mm-aaaa - Titolo del brano.mp3` dentro `audio/public/`
-(o `audio/locked/` per un brano nascosto), con un'eventuale copertina
-omonima dentro `covers/public/` (o `covers/locked/`). Poi fai push:
-il sito si aggiorna da solo.
+Vedi [`audio/README.md`](audio/README.md). In breve: chiama il file audio
+col **titolo del brano** (`Porti e Formaggi.mp3`) e mettilo in
+`audio/public/`, oppure in `audio/locked/` se è un brano nascosto.
+La copertina è un'immagine con **lo stesso titolo** dentro `covers/`
+(`covers/public/Porti e Formaggi.png`). Poi fai push: il sito si aggiorna
+da solo.
+
+Se vuoi mostrare anche una data sotto il titolo, mettila davanti al nome
+del file audio: `14-09-2026 - Porti e Formaggi.mp3`. La copertina resta
+comunque `Porti e Formaggi.png`, senza data.
 
 ## Perché non è collegato direttamente a Google Drive
 

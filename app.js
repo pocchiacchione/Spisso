@@ -128,8 +128,12 @@ function getQueue() {
 
 /* ---------------- Utility data/testo ---------------- */
 
+// La data è facoltativa: se il file audio non ce l'ha nel nome,
+// semplicemente non viene mostrata niente.
 function formatDate(dateStr) {
+  if (!dateStr) return "";
   const d = new Date(dateStr + "T00:00:00");
+  if (isNaN(d.getTime())) return "";
   return d.toLocaleDateString("it-IT", { day: "numeric", month: "long", year: "numeric" });
 }
 

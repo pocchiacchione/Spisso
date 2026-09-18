@@ -2,31 +2,30 @@
 /**
  * generate-manifest.js
  * ---------------------
- * Questo script "guarda" le cartelle audio/public, audio/locked,
- * covers/public e covers/locked dentro il repo e genera songs.js
- * automaticamente, leggendo la data e il titolo dal nome del file.
+ * Legge le cartelle audio/ e covers/ dentro il repo e genera songs.js
+ * automaticamente, ricavando titolo e (se c'è) data dal nome del file.
  *
- * FORMATO NOME FILE RICHIESTO (dentro audio/public o audio/locked):
- *   gg-mm-aaaa - Titolo della canzone.mp3
- *   esempio: 14-09-2026 - Sotto il sole del Salento.mp3
+ * NOME DEL FILE AUDIO
+ *   Basta il titolo:
+ *     Porti e Formaggi.mp3
+ *   Se vuoi anche la data, mettila davanti:
+ *     13-08-2026 - Colazione da Ender.mp3
+ *   (Usiamo i trattini "-" al posto delle barre "/" perché "/" non è un
+ *   carattere ammesso nei nomi dei file.)
  *
- * (Usiamo i trattini "-" al posto delle barre "/" perché "/" non è un
- * carattere ammesso nei nomi dei file su nessun sistema operativo.)
+ * COPERTINE
+ *   Metti l'immagine in covers/ con lo stesso TITOLO del brano:
+ *     covers/public/Porti e Formaggi.png
+ *   Non serve ripetere la data e non importa in quale sottocartella di
+ *   covers/ la metti (public o locked): lo script le cerca tutte.
+ *   Maiuscole, accenti e punteggiatura non contano.
+ *   Se non trova niente, usa covers/default-cover.svg.
  *
- * COPERTINE:
- *   Metti in covers/public (o covers/locked) un'immagine con LO STESSO
- *   NOME del file audio (estensione .jpg, .jpeg, .png o .webp).
- *   esempio: covers/public/14-09-2026 - Sotto il sole del Salento.jpg
- *   Se non trovi nessuna copertina corrispondente, viene usata
- *   covers/default-cover.svg.
- *
- * COME SI USA:
+ * COME SI USA
  *   node scripts/generate-manifest.js
  *
- * Viene eseguito automaticamente anche da una GitHub Action
- * (.github/workflows/build-manifest.yml) ogni volta che fai push
- * di nuovi file dentro audio/ o covers/, quindi normalmente non
- * serve lanciarlo a mano.
+ * Viene eseguito automaticamente anche dalla GitHub Action
+ * (.github/workflows/build-manifest.yml) ad ogni push.
  */
 
 const fs = require("fs");
@@ -34,34 +33,157 @@ const path = require("path");
 
 const ROOT = path.join(__dirname, "..");
 const AUDIO_EXTENSIONS = [".mp3", ".wav", ".m4a", ".ogg"];
-const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"];
 const DEFAULT_COVER = "covers/default-cover.svg";
+const COVERS_DIR = path.join(ROOT, "covers");
 
-// Nome file: "gg-mm-aaaa - Titolo.ext"
-const FILENAME_PATTERN = /^(\d{2})-(\d{2})-(\d{4})\s*-\s*(.+)$/;
+// Data opzionale all'inizio del nome: "gg-mm-aaaa - Titolo"
+const DATE_PREFIX_PATTERN = /^(\d{2})-(\d{2})-(\d{4})\s*-\s*(.+)$/;
+
+// Soglia di somiglianza per abbinare una copertina il cui nome non è
+// identico al titolo (es. "Ban nel Void di Alessio" vs "...per Alessio").
+const FUZZY_THRESHOLD = 0.7;
+
+/* ---------------- Utility sui nomi ---------------- */
 
 function slugify(str) {
   return str
     .toLowerCase()
-    .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // rimuove accenti
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/(^-|-$)/g, "");
 }
 
-function findCover(coversDir, baseName) {
-  for (const ext of IMAGE_EXTENSIONS) {
-    const candidate = path.join(coversDir, baseName + ext);
-    if (fs.existsSync(candidate)) {
-      return path.relative(ROOT, candidate).split(path.sep).join("/");
+// Confronto "morbido": via maiuscole, accenti e punteggiatura.
+// "Leonardo e Tommaso_ La Sfida Epica" -> "leonardo e tommaso la sfida epica"
+function normalizeName(str) {
+  return str
+    .toLowerCase()
+    .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+// Toglie la data iniziale, se c'è, e restituisce { date, title }
+function splitDateAndTitle(baseName) {
+  const match = baseName.match(DATE_PREFIX_PATTERN);
+  if (!match) return { date: null, title: cleanTitle(baseName) };
+
+  const [, dd, mm, yyyy, rest] = match;
+  const isoDate = `${yyyy}-${mm}-${dd}`;
+  const d = new Date(`${isoDate}T00:00:00`);
+  if (isNaN(d.getTime())) return { date: null, title: cleanTitle(baseName) };
+
+  return { date: isoDate, title: cleanTitle(rest) };
+}
+
+// Piccole pulizie sul titolo:
+//  - "Titolo_ Sottotitolo" -> "Titolo: Sottotitolo"
+//    (i due punti non si possono usare nei nomi dei file su Windows,
+//     quindi l'underscore prima di uno spazio viene letto come ":")
+//  - toglie suffissi tecnici tipo "-audio"
+//  - toglie gli spazi doppi
+function cleanTitle(str) {
+  return str
+    .replace(/_\s+/g, ": ")
+    .replace(/[\s_-]*(audio|traccia|track)$/i, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/* ---------------- Indice delle copertine ---------------- */
+
+// Scorre TUTTE le sottocartelle di covers/ e crea un indice
+// nome-normalizzato -> percorso, così basta il titolo per trovarle.
+function buildCoverIndex() {
+  const index = new Map();
+
+  function walk(dir) {
+    if (!fs.existsSync(dir)) return;
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name.startsWith(".")) continue;
+      const full = path.join(dir, entry.name);
+
+      if (entry.isDirectory()) {
+        walk(full);
+        continue;
+      }
+
+      const ext = path.extname(entry.name).toLowerCase();
+      if (!IMAGE_EXTENSIONS.includes(ext)) continue;
+
+      const baseName = path.basename(entry.name, ext);
+      if (baseName === "default-cover") continue;
+
+      const relPath = path.relative(ROOT, full).split(path.sep).join("/");
+
+      // La stessa copertina è cercabile sia col nome completo
+      // ("13-08-2026 - Titolo") sia col solo titolo ("Titolo").
+      const keys = new Set([
+        normalizeName(baseName),
+        normalizeName(splitDateAndTitle(baseName).title)
+      ]);
+
+      for (const key of keys) {
+        if (key && !index.has(key)) index.set(key, relPath);
+      }
     }
   }
+
+  walk(COVERS_DIR);
+  return index;
+}
+
+// Somiglianza fra due nomi (coefficiente di Dice sulle parole): 1 = identici
+function similarity(a, b) {
+  const wa = a.split(" ").filter(Boolean);
+  const wb = b.split(" ").filter(Boolean);
+  if (!wa.length || !wb.length) return 0;
+
+  const rest = [...wb];
+  let common = 0;
+  for (const w of wa) {
+    const i = rest.indexOf(w);
+    if (i !== -1) {
+      common++;
+      rest.splice(i, 1);
+    }
+  }
+  return (2 * common) / (wa.length + wb.length);
+}
+
+function findCover(coverIndex, song, baseName, approxNotes) {
+  const candidates = [normalizeName(song.title), normalizeName(baseName)];
+
+  // 1) Corrispondenza esatta (a meno di maiuscole/accenti/punteggiatura)
+  for (const key of candidates) {
+    if (key && coverIndex.has(key)) return coverIndex.get(key);
+  }
+
+  // 2) Corrispondenza approssimativa, per piccole differenze di nome
+  const target = candidates[0];
+  let best = null;
+  let bestScore = 0;
+  for (const [key, value] of coverIndex) {
+    const score = similarity(target, key);
+    if (score > bestScore) {
+      bestScore = score;
+      best = { key, value };
+    }
+  }
+
+  if (best && bestScore >= FUZZY_THRESHOLD) {
+    approxNotes.push(`"${song.title}" -> ${best.value}`);
+    return best.value;
+  }
+
   return DEFAULT_COVER;
 }
 
-function readFolder(audioDirName) {
-  const audioDir = path.join(ROOT, "audio", audioDirName);
-  const coversDir = path.join(ROOT, "covers", audioDirName);
+/* ---------------- Lettura di una cartella audio ---------------- */
 
+function readFolder(audioDirName, coverIndex, approxNotes, missingCovers) {
+  const audioDir = path.join(ROOT, "audio", audioDirName);
   if (!fs.existsSync(audioDir)) return [];
 
   const files = fs.readdirSync(audioDir).filter((f) => {
@@ -70,62 +192,59 @@ function readFolder(audioDirName) {
   });
 
   const songs = [];
-  const skipped = [];
 
   for (const file of files) {
     const ext = path.extname(file);
     const baseName = path.basename(file, ext);
-    const match = baseName.match(FILENAME_PATTERN);
+    const { date, title } = splitDateAndTitle(baseName);
 
-    if (!match) {
-      skipped.push(file);
-      continue;
-    }
+    if (!title) continue;
 
-    const [, dd, mm, yyyy, title] = match;
-    const cleanTitle = title.trim();
-    const isoDate = `${yyyy}-${mm}-${dd}`;
-
-    // Validazione base della data
-    const d = new Date(`${isoDate}T00:00:00`);
-    if (isNaN(d.getTime())) {
-      skipped.push(file + " (data non valida)");
-      continue;
-    }
-
-    songs.push({
-      id: `${audioDirName}-${slugify(cleanTitle)}-${dd}${mm}${yyyy}`,
-      title: cleanTitle,
-      date: isoDate,
+    const song = {
+      id: date
+        ? `${audioDirName}-${slugify(title)}-${date.slice(8, 10)}${date.slice(5, 7)}${date.slice(0, 4)}`
+        : `${audioDirName}-${slugify(title)}`,
+      title,
+      date, // può essere null: il brano funziona lo stesso
       audio: `audio/${audioDirName}/${file}`,
-      cover: findCover(coversDir, baseName)
-    });
+      cover: DEFAULT_COVER
+    };
+
+    song.cover = findCover(coverIndex, song, baseName, approxNotes);
+    if (song.cover === DEFAULT_COVER) missingCovers.push(title);
+
+    songs.push(song);
   }
 
-  if (skipped.length) {
-    console.warn(
-      `\n⚠️  File ignorati in audio/${audioDirName} (nome non nel formato "gg-mm-aaaa - Titolo.ext"):`
-    );
-    skipped.forEach((f) => console.warn("   - " + f));
-  }
-
-  // Ordina per data crescente
-  songs.sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
+  // Prima i brani con data (dal più vecchio al più recente),
+  // poi quelli senza data in ordine alfabetico.
+  songs.sort((a, b) => {
+    if (a.date && b.date) return a.date < b.date ? -1 : a.date > b.date ? 1 : 0;
+    if (a.date) return -1;
+    if (b.date) return 1;
+    return a.title.localeCompare(b.title, "it");
+  });
 
   return songs;
 }
 
+/* ---------------- Main ---------------- */
+
 function main() {
-  const publicSongs = readFolder("public");
-  const lockedSongs = readFolder("locked");
+  const coverIndex = buildCoverIndex();
+  const approxNotes = [];
+  const missingCovers = [];
+
+  const publicSongs = readFolder("public", coverIndex, approxNotes, missingCovers);
+  const lockedSongs = readFolder("locked", coverIndex, approxNotes, missingCovers);
 
   const output = `// songs.js
 // ⚠️ FILE GENERATO AUTOMATICAMENTE da scripts/generate-manifest.js
 // Non modificarlo a mano: le modifiche verranno sovrascritte.
 // Per aggiungere/rimuovere canzoni, metti i file audio in
-// audio/public (o audio/locked) seguendo il formato
-// "gg-mm-aaaa - Titolo.mp3" e rilancia lo script (o fai push:
-// la GitHub Action lo rilancia da sola).
+// audio/public (o audio/locked) chiamandoli col titolo del brano
+// ("Titolo.mp3", oppure "gg-mm-aaaa - Titolo.mp3" se vuoi la data)
+// e rilancia lo script (o fai push: la GitHub Action lo rilancia da sola).
 
 const SONGS = ${JSON.stringify(publicSongs, null, 2)};
 
@@ -134,7 +253,19 @@ const LOCKED_SONGS = ${JSON.stringify(lockedSongs, null, 2)};
 
   fs.writeFileSync(path.join(ROOT, "songs.js"), output, "utf-8");
 
-  console.log(`\n✅ songs.js generato: ${publicSongs.length} canzoni pubbliche, ${lockedSongs.length} canzoni bloccate.`);
+  console.log(
+    `\n✅ songs.js generato: ${publicSongs.length} brani pubblici, ${lockedSongs.length} brani bloccati.`
+  );
+
+  if (approxNotes.length) {
+    console.log("\nℹ️  Copertine abbinate per somiglianza (il nome non era identico al titolo):");
+    approxNotes.forEach((n) => console.log("   - " + n));
+  }
+
+  if (missingCovers.length) {
+    console.log("\n⚠️  Senza copertina (viene usata quella di default):");
+    missingCovers.forEach((t) => console.log("   - " + t));
+  }
 }
 
 main();
