@@ -38,7 +38,7 @@ const SONGS = [
     "date": "2026-05-01",
     "author": null,
     "audio": "audio/public/01-05-2026 - TRIO POCCHIA.mp3",
-    "cover": "covers/default-cover.svg"
+    "cover": "covers/public/TRIO POCCHIA.png"
   },
   {
     "id": "public-colazione-da-ender-13082026",
