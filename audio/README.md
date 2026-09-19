@@ -24,6 +24,19 @@ audio/public/14-09-2026 - Sotto il sole del Salento.mp3
 La data è facoltativa: i brani senza data funzionano lo stesso e vengono
 messi in fondo alla lista, in ordine alfabetico.
 
+Se vuoi indicare anche l'**autore** del brano, mettilo alla fine del nome
+del file, dopo un altro `" - "`:
+
+```
+audio/public/14-09-2026 - Sotto il sole del Salento - Mario Rossi.mp3
+```
+
+Il nome del file segue quindi la struttura `DATA - TITOLO - AUTORE`, dove
+sia la data che l'autore sono facoltativi e indipendenti tra loro (puoi
+avere solo il titolo, titolo+data, titolo+autore, o tutti e tre). L'autore
+viene mostrato sul sito sotto la copertina del brano, nella pagina
+principale. Se lo ometti, quello spazio resta semplicemente vuoto.
+
 Non usare la barra `/` per separare giorno/mese/anno: nei nomi dei file
 non è un carattere ammesso, quindi si usa il trattino `-`.
 

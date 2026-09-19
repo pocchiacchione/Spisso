@@ -10,6 +10,13 @@
  *     Porti e Formaggi.mp3
  *   Se vuoi anche la data, mettila davanti:
  *     13-08-2026 - Colazione da Ender.mp3
+ *   Se vuoi indicare anche l'autore del brano, mettilo alla fine:
+ *     13-08-2026 - Colazione da Ender - Mario Rossi.mp3
+ *   La struttura completa è quindi: DATA - NOME - AUTORE (data e autore
+ *   sono entrambi facoltativi e indipendenti l'uno dall'altro: puoi avere
+ *   solo il titolo, titolo+data, titolo+autore, o tutti e tre).
+ *   Se l'autore viene omesso, sul sito non compare nessun nome sotto la
+ *   copertina del brano nella pagina principale.
  *   (Usiamo i trattini "-" al posto delle barre "/" perché "/" non è un
  *   carattere ammesso nei nomi dei file.)
  *
@@ -64,17 +71,44 @@ function normalizeName(str) {
     .trim();
 }
 
-// Toglie la data iniziale, se c'è, e restituisce { date, title }
-function splitDateAndTitle(baseName) {
+// Toglie la data iniziale, se c'è, e restituisce { date, rest }
+// (rest è tutto quello che segue: titolo, più eventuale autore)
+function splitDateAndRest(baseName) {
   const match = baseName.match(DATE_PREFIX_PATTERN);
-  if (!match) return { date: null, title: cleanTitle(baseName) };
+  if (!match) return { date: null, rest: baseName };
 
   const [, dd, mm, yyyy, rest] = match;
   const isoDate = `${yyyy}-${mm}-${dd}`;
   const d = new Date(`${isoDate}T00:00:00`);
-  if (isNaN(d.getTime())) return { date: null, title: cleanTitle(baseName) };
+  if (isNaN(d.getTime())) return { date: null, rest: baseName };
 
-  return { date: isoDate, title: cleanTitle(rest) };
+  return { date: isoDate, rest };
+}
+
+// Toglie l'eventuale autore in fondo ("Titolo - Autore") e restituisce
+// { title, author }. L'autore è facoltativo: se non c'è (nessun " - "
+// residuo dopo aver tolto la data), author è null.
+function splitTitleAndAuthor(rest) {
+  const idx = rest.lastIndexOf(" - ");
+  if (idx === -1) return { title: cleanTitle(rest), author: null };
+
+  const titlePart = rest.slice(0, idx);
+  const authorPart = rest.slice(idx + 3).trim();
+
+  // Se manca il titolo o l'autore è vuoto, non era davvero un autore:
+  // si tiene tutto come titolo.
+  if (!titlePart.trim() || !authorPart) {
+    return { title: cleanTitle(rest), author: null };
+  }
+
+  return { title: cleanTitle(titlePart), author: cleanTitle(authorPart) };
+}
+
+// Nome del file (senza estensione e senza data) -> { date, title, author }
+function splitDateAndTitle(baseName) {
+  const { date, rest } = splitDateAndRest(baseName);
+  const { title, author } = splitTitleAndAuthor(rest);
+  return { date, title, author };
 }
 
 // Piccole pulizie sul titolo:
@@ -196,7 +230,7 @@ function readFolder(audioDirName, coverIndex, approxNotes, missingCovers) {
   for (const file of files) {
     const ext = path.extname(file);
     const baseName = path.basename(file, ext);
-    const { date, title } = splitDateAndTitle(baseName);
+    const { date, title, author } = splitDateAndTitle(baseName);
 
     if (!title) continue;
 
@@ -206,6 +240,7 @@ function readFolder(audioDirName, coverIndex, approxNotes, missingCovers) {
         : `${audioDirName}-${slugify(title)}`,
       title,
       date, // può essere null: il brano funziona lo stesso
+      author: author || null, // può essere null: sul sito non compare nulla
       audio: `audio/${audioDirName}/${file}`,
       cover: DEFAULT_COVER
     };
@@ -243,7 +278,8 @@ function main() {
 // Non modificarlo a mano: le modifiche verranno sovrascritte.
 // Per aggiungere/rimuovere canzoni, metti i file audio in
 // audio/public (o audio/locked) chiamandoli col titolo del brano
-// ("Titolo.mp3", oppure "gg-mm-aaaa - Titolo.mp3" se vuoi la data)
+// ("Titolo.mp3", oppure "gg-mm-aaaa - Titolo.mp3" se vuoi la data,
+// oppure "gg-mm-aaaa - Titolo - Autore.mp3" se vuoi anche l'autore)
 // e rilancia lo script (o fai push: la GitHub Action lo rilancia da sola).
 
 const SONGS = ${JSON.stringify(publicSongs, null, 2)};
