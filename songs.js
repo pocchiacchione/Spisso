@@ -113,7 +113,7 @@ const LOCKED_SONGS = [
     "date": "2026-08-13",
     "author": null,
     "audio": "audio/locked/13-08-2026 - Mi Devo Scollegare.mp3",
-    "cover": "covers/default-cover.svg"
+    "cover": "covers/public/Mi Devo Scollegare.png"
   },
   {
     "id": "locked-ehi-sono-io-sono-spissity-03092026",
