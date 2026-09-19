@@ -88,8 +88,55 @@ sito. Ogni dispositivo/browser ha il suo elenco.
 - `UNLOCK_STOP_WORDS` — parole troppo comuni che da sole non sbloccano.
 - `MASTER_UNLOCK_CODE` — codice speciale che sblocca **tutti** i brani in
   una volta (di default `piocheddar`). Metti `null` se non lo vuoi.
+- `UNDATED_ONLY_IN_ALPHABETICAL` — se `true` (predefinito) i brani senza data
+  compaiono solo nell'ordine alfabetico (vedi sopra).
 
 `config.js` non viene mai sovrascritto dallo script di generazione.
+
+## Ordine dei brani nella schermata principale
+
+Sopra la griglia c'è il bottone **Ordina**, che apre un menu con 3 opzioni:
+
+- **Ordine cronologico** (predefinito per chi non ha mai aperto il sito): dal
+  brano più vecchio al più recente, in base alla data nel nome del file.
+- **Ordine cronologico inverso**: dal più recente al più vecchio.
+- **Ordine alfabetico**: per titolo, dalla A alla Z.
+
+I brani **senza data** nel nome del file non hanno una posizione nel tempo,
+quindi compaiono **solo nell'ordine alfabetico**. Se preferisci vederli anche
+negli ordini cronologici (in fondo alla lista), metti
+`UNDATED_ONLY_IN_ALPHABETICAL = false` in `config.js`.
+
+Il tasto "Successivo/Precedente" del player segue l'ordine che stai vedendo.
+
+## Brani che ti piacciono (preferiti)
+
+Ogni brano ha un **cuore**: sulla copertina nella griglia, nella barra in basso
+e nel pannello a tendina. Toccandolo il brano finisce nella playlist
+**Brani che ti piacciono** (voce "Preferiti" nella sidebar, oppure la scheda
+"Preferiti" in alto su telefono).
+
+- Nella playlist i brani stanno **nell'ordine in cui hai messo il cuore**
+  (il primo a cui l'hai messo è il primo della lista).
+- Si possono **spostare come vuoi**: trascinando la maniglia a sinistra di ogni
+  riga (con mouse o dito) oppure con le frecce su/giù.
+- Se togli un cuore e lo rimetti, il brano torna in fondo alla playlist.
+- "Successivo/Precedente" segue la playlist quando il brano parte da lì.
+
+### Cosa viene salvato sul dispositivo
+
+Tutto è nel `localStorage` del browser, quindi **ogni persona ha la sua
+playlist** (non c'è nessun account e niente viaggia su un server). Restano
+salvati anche chiudendo e riaprendo il sito:
+
+| Chiave | Contenuto |
+| --- | --- |
+| `spisso_unlocked_ids` | i brani sbloccati |
+| `spisso_favorite_ids` | la playlist dei preferiti, nell'ordine scelto |
+| `spisso_sort_order` | l'ordine della schermata principale (`chrono`, `chrono-desc`, `alpha`) |
+
+Limite da tenere presente: chi usa un altro dispositivo o un altro browser
+(o svuota i dati del sito) riparte da zero, perché i dati non si sincronizzano.
 
 ## Provare il sito in locale
 

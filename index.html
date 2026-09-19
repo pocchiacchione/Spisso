@@ -25,6 +25,10 @@
       <a href="#" class="nav-item active" data-view="home">
         <span class="nav-icon">&#8962;</span> Home
       </a>
+      <a href="#" class="nav-item" data-view="favorites">
+        <span class="nav-icon">&#9829;</span> Preferiti
+        <span class="nav-count" id="nav-fav-count"></span>
+      </a>
     </nav>
 
     <div class="sidebar-block library-block">
@@ -49,17 +53,65 @@
         <button class="round-btn" disabled aria-label="Indietro">&#8249;</button>
         <button class="round-btn" disabled aria-label="Avanti">&#8250;</button>
       </div>
+      <div class="view-tabs" role="tablist" aria-label="Sezioni">
+        <button type="button" class="view-tab active" data-view="home" role="tab" aria-selected="true">Home</button>
+        <button type="button" class="view-tab" data-view="favorites" role="tab" aria-selected="false">&#9829; Preferiti <span class="view-tab-count" id="tab-fav-count"></span></button>
+      </div>
     </header>
 
     <section class="content">
-      <div class="hero">
-        <p class="hero-eyebrow">Brano del giorno</p>
-        <h1 id="hero-title">—</h1>
-        <button class="hero-play" id="hero-play" aria-label="Riproduci il brano del giorno">&#9658; Riproduci</button>
+
+      <!-- ===== Vista HOME ===== -->
+      <div id="view-home">
+        <div class="hero">
+          <p class="hero-eyebrow">Brano del giorno</p>
+          <h1 id="hero-title">—</h1>
+          <button class="hero-play" id="hero-play" aria-label="Riproduci il brano del giorno">&#9658; Riproduci</button>
+        </div>
+
+        <div class="section-head">
+          <h2 class="section-title">Tutti i brani</h2>
+
+          <div class="sort-menu" id="sort-menu">
+            <button type="button" class="sort-btn" id="sort-btn" aria-haspopup="menu" aria-expanded="false" aria-controls="sort-list">
+              <span class="sort-btn-label">Ordina:</span>
+              <span class="sort-btn-value" id="sort-btn-value">Cronologico</span>
+              <span class="sort-btn-caret" aria-hidden="true">&#9662;</span>
+            </button>
+            <div class="sort-list" id="sort-list" role="menu" aria-label="Ordine dei brani" hidden>
+              <button type="button" class="sort-option" role="menuitemradio" data-sort="chrono" aria-checked="true">Ordine cronologico</button>
+              <button type="button" class="sort-option" role="menuitemradio" data-sort="chrono-desc" aria-checked="false">Ordine cronologico inverso</button>
+              <button type="button" class="sort-option" role="menuitemradio" data-sort="alpha" aria-checked="false">Ordine alfabetico</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="song-grid" id="song-grid"></div>
       </div>
 
-      <h2 class="section-title">Tutti i brani</h2>
-      <div class="song-grid" id="song-grid"></div>
+      <!-- ===== Vista PREFERITI ===== -->
+      <div id="view-favorites" hidden>
+        <div class="fav-header">
+          <div class="fav-badge" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+          </div>
+          <div class="fav-header-text">
+            <p class="hero-eyebrow">Playlist</p>
+            <h1 class="fav-heading">Brani che ti piacciono</h1>
+            <p class="fav-count" id="fav-count"></p>
+          </div>
+          <button type="button" class="hero-play" id="fav-play">&#9658; Riproduci</button>
+        </div>
+
+        <p class="fav-hint" id="fav-hint">Trascina dalla maniglia a sinistra oppure usa le frecce per cambiare l'ordine. La playlist è solo tua: resta salvata su questo dispositivo.</p>
+        <ol class="fav-list" id="fav-list"></ol>
+
+        <div class="fav-empty" id="fav-empty" hidden>
+          <p class="fav-empty-title">Non hai ancora nessun brano preferito</p>
+          <p>Tocca il cuore su un brano per aggiungerlo qui: i brani restano nell'ordine in cui li hai messi.</p>
+        </div>
+      </div>
+
     </section>
   </main>
 
@@ -81,6 +133,10 @@
   <p class="np-panel-eyebrow">In riproduzione</p>
   <h2 class="np-panel-title" id="np-panel-title">—</h2>
   <p class="np-panel-date" id="np-panel-date"></p>
+
+  <div class="np-panel-actions">
+    <button type="button" class="heart-btn np-panel-heart" id="np-panel-heart" aria-pressed="false" aria-label="Nessun brano in riproduzione" disabled></button>
+  </div>
 
   <div class="np-panel-progress">
     <span class="time" id="np-panel-cur">0:00</span>
@@ -106,6 +162,7 @@
       <div class="np-title" id="np-title">Nessun brano in riproduzione</div>
       <div class="np-date" id="np-date"></div>
     </div>
+    <button type="button" class="heart-btn np-heart" id="np-heart" aria-pressed="false" aria-label="Nessun brano in riproduzione" disabled></button>
   </div>
 
   <div class="transport">

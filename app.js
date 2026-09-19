@@ -1,11 +1,27 @@
 // app.js — logica di Sportify (Spotify-style single page player)
 
-// Chiave nuova: salva la LISTA degli id dei brani sbloccati, così i brani
+/* ---------------- Chiavi di salvataggio sul dispositivo (localStorage) ---------------- */
+
+// Salva la LISTA degli id dei brani sbloccati, così i brani
 // restano sbloccati sul dispositivo anche chiudendo o ricaricando il sito.
 const STORAGE_KEY = "spisso_unlocked_ids";
 // Vecchia chiave (contava solo QUANTI brani erano sbloccati): la leggiamo
 // una volta sola per non far perdere i progressi a chi usava già il sito.
 const LEGACY_STORAGE_KEY = "spisso_unlocked_count";
+// Playlist dei preferiti: lista di id NELL'ORDINE della playlist
+// (il primo brano a cui hai messo il cuore è il primo; poi puoi spostarli).
+const FAVORITES_KEY = "spisso_favorite_ids";
+// Ordine scelto nella schermata principale: "chrono" | "chrono-desc" | "alpha".
+const SORT_KEY = "spisso_sort_order";
+
+// Ogni persona ha la sua playlist perché tutto è salvato nel browser di chi
+// visita il sito (non c'è un account): ogni dispositivo ha i suoi preferiti.
+
+/* ---------------- Elenco di tutti i brani ---------------- */
+
+const ALL_SONGS = [...SONGS, ...LOCKED_SONGS];
+const ALL_SONGS_BY_ID = new Map(ALL_SONGS.map((s) => [s.id, s]));
+const PUBLIC_IDS = new Set(SONGS.map((s) => s.id));
 
 /* ---------------- Stato brani sbloccati (salvato sul dispositivo) ---------------- */
 
@@ -67,6 +83,169 @@ function getUnlockedLockedSongs() {
   return LOCKED_SONGS.filter(isUnlocked);
 }
 
+// Un brano è "disponibile" se è pubblico oppure l'hai già sbloccato
+function isAvailable(song) {
+  return PUBLIC_IDS.has(song.id) || unlockedIds.has(song.id);
+}
+
+// Tutti i brani che puoi ascoltare, in ordine "di archivio" (non ordinati per l'utente)
+function getAvailableSongs() {
+  return [...SONGS, ...getUnlockedLockedSongs()];
+}
+
+/* ---------------- Preferiti (salvati sul dispositivo) ---------------- */
+
+function readFavoriteIds() {
+  let ids = [];
+  try {
+    const raw = localStorage.getItem(FAVORITES_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) ids = parsed.filter((x) => typeof x === "string");
+    }
+  } catch (err) {
+    ids = [];
+  }
+
+  // Tiene solo gli id che esistono ancora, senza doppioni, nell'ordine salvato
+  const seen = new Set();
+  return ids.filter((id) => {
+    if (!ALL_SONGS_BY_ID.has(id) || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+function writeFavoriteIds() {
+  try {
+    localStorage.setItem(FAVORITES_KEY, JSON.stringify(favoriteIds));
+  } catch (err) {
+    // Salvataggio non possibile: i preferiti restano validi per questa sessione.
+  }
+}
+
+// Ordine della playlist: chi ha ricevuto il cuore prima sta prima
+let favoriteIds = readFavoriteIds();
+
+function isFavorite(song) {
+  return favoriteIds.includes(song.id);
+}
+
+// I brani della playlist, nell'ordine scelto (solo quelli ascoltabili)
+function getFavoriteSongs() {
+  return favoriteIds
+    .map((id) => ALL_SONGS_BY_ID.get(id))
+    .filter((song) => song && isAvailable(song));
+}
+
+// Salva un nuovo ordine per i brani visibili nella playlist
+function setFavoriteOrder(visibleIdsInOrder) {
+  const rest = favoriteIds.filter((id) => !visibleIdsInOrder.includes(id));
+  favoriteIds = [...visibleIdsInOrder, ...rest];
+  writeFavoriteIds();
+}
+
+// Mette/toglie il cuore. Un nuovo cuore va in fondo alla playlist.
+function toggleFavorite(song) {
+  const i = favoriteIds.indexOf(song.id);
+  if (i === -1) {
+    favoriteIds.push(song.id);
+  } else {
+    favoriteIds.splice(i, 1);
+  }
+  writeFavoriteIds();
+  onFavoritesChanged();
+}
+
+/* ---------------- Ordine dei brani nella schermata principale ---------------- */
+
+const SORT_LABELS = {
+  "chrono": "Cronologico",
+  "chrono-desc": "Cronologico inverso",
+  "alpha": "Alfabetico",
+};
+const DEFAULT_SORT = "chrono"; // per chi non ha mai aperto il sito
+
+function readSortOrder() {
+  try {
+    const value = localStorage.getItem(SORT_KEY);
+    if (value && Object.prototype.hasOwnProperty.call(SORT_LABELS, value)) return value;
+  } catch (err) {
+    // niente salvataggio: si usa l'ordine predefinito
+  }
+  return DEFAULT_SORT;
+}
+
+function writeSortOrder(order) {
+  try {
+    localStorage.setItem(SORT_KEY, order);
+  } catch (err) {
+    // Salvataggio non possibile: l'ordine vale per questa sessione.
+  }
+}
+
+let sortOrder = readSortOrder();
+
+// Titoli in ordine alfabetico italiano, senza differenza tra maiuscole/minuscole
+// e con i numeri "giusti" (Ludo e Fede 3 prima di Ludo e Fede 10).
+const titleCollator = new Intl.Collator("it", { sensitivity: "base", numeric: true });
+
+function compareByTitle(a, b) {
+  return titleCollator.compare(a.title, b.title);
+}
+
+function undatedOnlyInAlphabetical() {
+  return typeof UNDATED_ONLY_IN_ALPHABETICAL !== "undefined" && UNDATED_ONLY_IN_ALPHABETICAL === true;
+}
+
+// true se questo brano NON deve comparire nell'ordine indicato
+// (brani senza data negli ordini cronologici, se così è impostato in config.js)
+function isHiddenInOrder(song, order) {
+  return order !== "alpha" && !song.date && undatedOnlyInAlphabetical();
+}
+
+function sortSongs(list, order) {
+  if (order === "alpha") {
+    return [...list].sort(compareByTitle);
+  }
+
+  // Ordini cronologici: crescente (dal più vecchio) o inverso (dal più recente).
+  // Le date sono "AAAA-MM-GG", quindi si confrontano bene come testo.
+  const sign = order === "chrono-desc" ? -1 : 1;
+  const dated = list.filter((s) => s.date);
+  const undated = list.filter((s) => !s.date);
+
+  dated.sort((a, b) => {
+    if (a.date !== b.date) return a.date < b.date ? -sign : sign;
+    return sign * compareByTitle(a, b); // stessa data: per titolo (e inverso è l'esatto contrario)
+  });
+
+  if (undatedOnlyInAlphabetical()) return dated;
+  return [...dated, ...undated.sort(compareByTitle)];
+}
+
+// I brani come li vede chi è nella schermata principale
+function getHomeSongs() {
+  return sortSongs(getAvailableSongs(), sortOrder);
+}
+
+/* ---------------- Coda di riproduzione ---------------- */
+
+// Il "successivo/precedente" segue la lista da cui hai fatto partire il brano:
+// la schermata principale (nell'ordine scelto) oppure la playlist dei preferiti.
+let playContext = "home"; // "home" | "favorites"
+
+function getQueue() {
+  return playContext === "favorites" ? getFavoriteSongs() : getHomeSongs();
+}
+
+// Posizione del brano in riproduzione dentro la coda (si ricalcola ogni volta,
+// così resta giusta anche se cambi ordine, sblocchi brani o sposti i preferiti)
+function getCurrentIndex() {
+  if (!currentSong) return -1;
+  return getQueue().findIndex((s) => s.id === currentSong.id);
+}
+
 /* ---------------- Riconoscimento del titolo scritto ---------------- */
 
 // Toglie maiuscole, accenti e punteggiatura: "Ludo e Fede!" -> "ludo e fede"
@@ -120,12 +299,6 @@ function findSongsByGuess(guess) {
   return LOCKED_SONGS.filter((song) => songMatchesGuess(song, guess));
 }
 
-// Elenco di TUTTI i brani attualmente visibili (pubblici + sbloccati),
-// nell'ordine in cui appaiono in pagina: è anche la coda di riproduzione.
-function getQueue() {
-  return [...SONGS, ...getUnlockedLockedSongs()];
-}
-
 /* ---------------- Utility data/testo ---------------- */
 
 // La data è facoltativa: se il file audio non ce l'ha nel nome,
@@ -151,6 +324,30 @@ function getSongOfTheDay(list) {
   return list[seed % list.length];
 }
 
+// Il brano del giorno non cambia se cambi l'ordine: si sceglie sempre tra i
+// brani che si vedono in ogni ordine (quindi non tra quelli "solo alfabetico").
+function getHeroPool() {
+  const all = getAvailableSongs();
+  if (!undatedOnlyInAlphabetical()) return all;
+  const dated = all.filter((s) => s.date);
+  return dated.length ? dated : all;
+}
+
+function escapeHtml(value) {
+  return String(value == null ? "" : value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+// Icone (SVG): cuore e maniglia per trascinare
+const HEART_SVG =
+  '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>';
+const GRIP_SVG =
+  '<svg viewBox="0 0 14 20" aria-hidden="true" focusable="false"><circle cx="4" cy="4" r="1.7"/><circle cx="10" cy="4" r="1.7"/><circle cx="4" cy="10" r="1.7"/><circle cx="10" cy="10" r="1.7"/><circle cx="4" cy="16" r="1.7"/><circle cx="10" cy="16" r="1.7"/></svg>';
+
 /* ---------------- Elementi DOM ---------------- */
 
 const audioEl = document.getElementById("audio-el");
@@ -164,10 +361,31 @@ const volumeBar = document.getElementById("volume-bar");
 const npTitle = document.getElementById("np-title");
 const npDate = document.getElementById("np-date");
 const npCover = document.getElementById("np-cover");
+const npHeartBtn = document.getElementById("np-heart");
 const gridEl = document.getElementById("song-grid");
 const heroTitle = document.getElementById("hero-title");
 const heroPlayBtn = document.getElementById("hero-play");
 const libraryCountEl = document.getElementById("library-count");
+const mainEl = document.querySelector(".main");
+
+// Viste (Home / Preferiti)
+const viewHome = document.getElementById("view-home");
+const viewFavorites = document.getElementById("view-favorites");
+const navFavCount = document.getElementById("nav-fav-count");
+const tabFavCount = document.getElementById("tab-fav-count");
+
+// Bottone "Ordina"
+const sortMenu = document.getElementById("sort-menu");
+const sortBtn = document.getElementById("sort-btn");
+const sortBtnValue = document.getElementById("sort-btn-value");
+const sortList = document.getElementById("sort-list");
+
+// Playlist dei preferiti
+const favListEl = document.getElementById("fav-list");
+const favEmptyEl = document.getElementById("fav-empty");
+const favHintEl = document.getElementById("fav-hint");
+const favCountEl = document.getElementById("fav-count");
+const favPlayBtn = document.getElementById("fav-play");
 
 // Menu a tendina (pannello "in riproduzione")
 const npPanel = document.getElementById("np-panel");
@@ -179,6 +397,7 @@ const npPanelDisc = document.getElementById("np-panel-disc");
 const npPanelCover = document.getElementById("np-panel-cover");
 const npPanelTitle = document.getElementById("np-panel-title");
 const npPanelDate = document.getElementById("np-panel-date");
+const npPanelHeartBtn = document.getElementById("np-panel-heart");
 const npPanelPlayBtn = document.getElementById("np-panel-play");
 const npPanelPrevBtn = document.getElementById("np-panel-prev");
 const npPanelNextBtn = document.getElementById("np-panel-next");
@@ -186,40 +405,107 @@ const npPanelSeek = document.getElementById("np-panel-seek");
 const npPanelCur = document.getElementById("np-panel-cur");
 const npPanelDur = document.getElementById("np-panel-dur");
 
-let currentIndex = -1; // indice nella coda corrente (getQueue())
 let currentSong = null; // brano effettivamente in riproduzione
+let currentView = "home";
 let seekBeingDragged = false;
 let panelSeekBeingDragged = false;
 let panelOpen = false;
 
+/* ---------------- Cuori (mi piace) ---------------- */
+
+function applyHeartState(btn, song) {
+  const liked = !!song && isFavorite(song);
+  btn.classList.toggle("liked", liked);
+  btn.setAttribute("aria-pressed", liked ? "true" : "false");
+  if (song) {
+    btn.setAttribute(
+      "aria-label",
+      liked
+        ? `Rimuovi "${song.title}" dai preferiti`
+        : `Aggiungi "${song.title}" ai preferiti`
+    );
+    btn.title = liked ? "Rimuovi dai preferiti" : "Aggiungi ai preferiti";
+  }
+}
+
+function createHeartButton(song, extraClass) {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "heart-btn " + (extraClass || "");
+  btn.dataset.likeId = song.id;
+  btn.innerHTML = HEART_SVG;
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation(); // il cuore non deve far partire il brano
+    toggleFavorite(song);
+  });
+  return btn;
+}
+
+// Allinea TUTTI i cuori della pagina allo stato reale dei preferiti
+function syncLikeButtons() {
+  document.querySelectorAll(".heart-btn[data-like-id]").forEach((btn) => {
+    applyHeartState(btn, ALL_SONGS_BY_ID.get(btn.dataset.likeId));
+  });
+
+  [npHeartBtn, npPanelHeartBtn].forEach((btn) => {
+    btn.disabled = !currentSong;
+    if (currentSong) {
+      applyHeartState(btn, currentSong);
+    } else {
+      btn.classList.remove("liked");
+      btn.setAttribute("aria-pressed", "false");
+      btn.setAttribute("aria-label", "Nessun brano in riproduzione");
+    }
+  });
+}
+
+function onFavoritesChanged() {
+  renderFavorites(); // aggiorna anche i cuori e i contatori
+}
+
+npHeartBtn.innerHTML = HEART_SVG;
+npPanelHeartBtn.innerHTML = HEART_SVG;
+[npHeartBtn, npPanelHeartBtn].forEach((btn) => {
+  btn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (currentSong) toggleFavorite(currentSong);
+  });
+});
+
 /* ---------------- Rendering ---------------- */
 
 function renderHero() {
-  const queue = getQueue();
-  const song = getSongOfTheDay(queue);
+  const pool = getHeroPool();
+  if (!pool.length) {
+    heroTitle.textContent = "—";
+    heroPlayBtn.onclick = null;
+    return;
+  }
+  const song = getSongOfTheDay(pool);
   heroTitle.textContent = song.title;
-  heroPlayBtn.onclick = () => openNowPlaying(queue.indexOf(song));
+  heroPlayBtn.onclick = () => openNowPlaying(song, "home");
 }
 
 function renderGrid() {
-  const queue = getQueue();
+  const songs = getHomeSongs();
   const remainingLocked = LOCKED_SONGS.filter((s) => !isUnlocked(s)).length;
 
   gridEl.innerHTML = "";
 
-  queue.forEach((song, i) => {
+  songs.forEach((song) => {
     const card = document.createElement("div");
     card.className = "song-card";
-    card.dataset.index = i;
+    card.dataset.songId = song.id;
     card.innerHTML = `
       <div class="cover-wrap">
-        <img src="${song.cover}" alt="Copertina di ${song.title}" loading="lazy">
-        <button class="card-play" aria-label="Riproduci ${song.title}">&#9658;</button>
+        <img src="${escapeHtml(song.cover)}" alt="Copertina di ${escapeHtml(song.title)}" loading="lazy">
+        <button class="card-play" aria-label="Riproduci ${escapeHtml(song.title)}">&#9658;</button>
       </div>
-      <p class="card-title">${song.title}</p>
-      <p class="card-sub">${song.author ? song.author : ""}</p>
+      <p class="card-title">${escapeHtml(song.title)}</p>
+      <p class="card-sub">${escapeHtml(song.author ? song.author : "")}</p>
     `;
-    card.addEventListener("click", () => openNowPlaying(i));
+    card.querySelector(".cover-wrap").appendChild(createHeartButton(song, "card-heart"));
+    card.addEventListener("click", () => openNowPlaying(song, "home"));
     gridEl.appendChild(card);
   });
 
@@ -236,31 +522,342 @@ function renderGrid() {
     gridEl.appendChild(card);
   }
 
-  libraryCountEl.textContent = `${queue.length} bran${queue.length === 1 ? "o" : "i"}`;
+  // La libreria conta tutti i brani che puoi ascoltare (anche quelli "solo alfabetico")
+  const total = getAvailableSongs().length;
+  libraryCountEl.textContent = `${total} bran${total === 1 ? "o" : "i"}`;
+
+  syncLikeButtons();
   highlightPlayingCard();
 }
 
 function highlightPlayingCard() {
-  document.querySelectorAll(".song-card").forEach((card) => {
-    card.classList.toggle("playing", Number(card.dataset.index) === currentIndex);
+  const playingId = currentSong ? currentSong.id : null;
+  document.querySelectorAll("[data-song-id]").forEach((el) => {
+    el.classList.toggle("playing", el.dataset.songId === playingId);
   });
 }
 
+/* ---------------- Ordina (bottone con 3 opzioni) ---------------- */
+
+function updateSortUI() {
+  sortBtnValue.textContent = SORT_LABELS[sortOrder];
+  sortList.querySelectorAll(".sort-option").forEach((opt) => {
+    opt.setAttribute("aria-checked", opt.dataset.sort === sortOrder ? "true" : "false");
+  });
+}
+
+function setSortOrder(order) {
+  if (!Object.prototype.hasOwnProperty.call(SORT_LABELS, order)) return;
+  sortOrder = order;
+  writeSortOrder(order);
+  updateSortUI();
+  renderGrid();
+}
+
+function openSortMenu() {
+  sortList.hidden = false;
+  sortBtn.setAttribute("aria-expanded", "true");
+  const checked = sortList.querySelector('.sort-option[aria-checked="true"]');
+  if (checked) checked.focus();
+}
+
+function closeSortMenu(returnFocus) {
+  if (sortList.hidden) return;
+  sortList.hidden = true;
+  sortBtn.setAttribute("aria-expanded", "false");
+  if (returnFocus) sortBtn.focus();
+}
+
+sortBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  if (sortList.hidden) {
+    openSortMenu();
+  } else {
+    closeSortMenu(false);
+  }
+});
+
+sortList.addEventListener("click", (e) => {
+  const opt = e.target.closest(".sort-option");
+  if (!opt) return;
+  setSortOrder(opt.dataset.sort);
+  closeSortMenu(true);
+});
+
+sortList.addEventListener("keydown", (e) => {
+  const opts = Array.from(sortList.querySelectorAll(".sort-option"));
+  const i = opts.indexOf(document.activeElement);
+  if (e.key === "ArrowDown") {
+    e.preventDefault();
+    opts[(i + 1) % opts.length].focus();
+  } else if (e.key === "ArrowUp") {
+    e.preventDefault();
+    opts[(i - 1 + opts.length) % opts.length].focus();
+  } else if (e.key === "Home") {
+    e.preventDefault();
+    opts[0].focus();
+  } else if (e.key === "End") {
+    e.preventDefault();
+    opts[opts.length - 1].focus();
+  }
+});
+
+// Cliccando fuori dal menu, o premendo Esc, si chiude
+document.addEventListener("click", (e) => {
+  if (!sortMenu.contains(e.target)) closeSortMenu(false);
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && !sortList.hidden) closeSortMenu(true);
+});
+
+/* ---------------- Viste: Home / Preferiti ---------------- */
+
+function setView(name) {
+  if (name !== "home" && name !== "favorites") return;
+  currentView = name;
+
+  viewHome.hidden = name !== "home";
+  viewFavorites.hidden = name !== "favorites";
+
+  document.querySelectorAll("[data-view]").forEach((el) => {
+    const active = el.dataset.view === name;
+    el.classList.toggle("active", active);
+    if (el.getAttribute("role") === "tab") {
+      el.setAttribute("aria-selected", active ? "true" : "false");
+    }
+  });
+
+  closeSortMenu(false);
+  mainEl.scrollTop = 0;
+}
+
+document.querySelectorAll("[data-view]").forEach((el) => {
+  el.addEventListener("click", (e) => {
+    e.preventDefault();
+    setView(el.dataset.view);
+  });
+});
+
+/* ---------------- Playlist dei preferiti ---------------- */
+
+function updateFavoriteCounts() {
+  const n = getFavoriteSongs().length;
+  navFavCount.textContent = n ? String(n) : "";
+  tabFavCount.textContent = n ? String(n) : "";
+  favCountEl.textContent = `${n} bran${n === 1 ? "o" : "i"}`;
+}
+
+function renderFavorites() {
+  const songs = getFavoriteSongs();
+
+  favListEl.innerHTML = "";
+
+  songs.forEach((song, i) => {
+    const sub = [formatDate(song.date), song.author].filter(Boolean).join(" · ");
+
+    const li = document.createElement("li");
+    li.className = "fav-row";
+    li.dataset.songId = song.id;
+    li.innerHTML = `
+      <button type="button" class="fav-handle" aria-label="Trascina per spostare ${escapeHtml(song.title)}" title="Trascina per spostare">${GRIP_SVG}</button>
+      <span class="fav-pos">${i + 1}</span>
+      <button type="button" class="fav-main">
+        <img class="fav-cover" src="${escapeHtml(song.cover)}" alt="" loading="lazy">
+        <span class="fav-info">
+          <span class="fav-row-title">${escapeHtml(song.title)}</span>
+          <span class="fav-row-sub">${escapeHtml(sub)}</span>
+        </span>
+      </button>
+      <div class="fav-actions">
+        <button type="button" class="fav-move" data-dir="-1" aria-label="Sposta ${escapeHtml(song.title)} più su"${i === 0 ? " disabled" : ""}>&#9650;</button>
+        <button type="button" class="fav-move" data-dir="1" aria-label="Sposta ${escapeHtml(song.title)} più giù"${i === songs.length - 1 ? " disabled" : ""}>&#9660;</button>
+      </div>
+    `;
+    li.querySelector(".fav-actions").appendChild(createHeartButton(song, "fav-heart"));
+    favListEl.appendChild(li);
+  });
+
+  const empty = songs.length === 0;
+  favEmptyEl.hidden = !empty;
+  favHintEl.hidden = songs.length < 2; // il suggerimento serve solo se c'è qualcosa da spostare
+  favPlayBtn.hidden = empty;
+
+  updateFavoriteCounts();
+  syncLikeButtons();
+  highlightPlayingCard();
+}
+
+// Sposta un brano di una posizione su (-1) o giù (+1) nella playlist
+function moveFavorite(songId, dir) {
+  const ids = getFavoriteSongs().map((s) => s.id);
+  const i = ids.indexOf(songId);
+  const j = i + dir;
+  if (i === -1 || j < 0 || j >= ids.length) return;
+
+  [ids[i], ids[j]] = [ids[j], ids[i]];
+  setFavoriteOrder(ids);
+  renderFavorites();
+
+  // Rimette il focus sul tasto appena usato (o sull'altra freccia se siamo arrivati in cima/in fondo)
+  const row = Array.from(favListEl.children).find((li) => li.dataset.songId === songId);
+  if (row) {
+    const same = row.querySelector(`.fav-move[data-dir="${dir}"]`);
+    const target = same && !same.disabled ? same : row.querySelector(".fav-move:not(:disabled)");
+    if (target) target.focus();
+  }
+}
+
+favListEl.addEventListener("click", (e) => {
+  const row = e.target.closest(".fav-row");
+  if (!row) return;
+
+  if (e.target.closest(".fav-handle")) return;
+
+  const moveBtn = e.target.closest(".fav-move");
+  if (moveBtn) {
+    if (!moveBtn.disabled) moveFavorite(row.dataset.songId, Number(moveBtn.dataset.dir));
+    return;
+  }
+
+  if (e.target.closest(".heart-btn") || e.target.closest(".fav-actions")) return;
+
+  const song = ALL_SONGS_BY_ID.get(row.dataset.songId);
+  if (song) openNowPlaying(song, "favorites");
+});
+
+favPlayBtn.addEventListener("click", () => {
+  const songs = getFavoriteSongs();
+  if (songs.length) openNowPlaying(songs[0], "favorites");
+});
+
+/* ----- Trascinamento (mouse e dito) con la maniglia ⋮⋮ ----- */
+
+let favDrag = null;
+
+function onFavPointerDown(e) {
+  const handle = e.target.closest ? e.target.closest(".fav-handle") : null;
+  if (!handle || favDrag) return;
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+
+  const rows = Array.from(favListEl.children);
+  const row = handle.closest(".fav-row");
+  const from = rows.indexOf(row);
+  if (from === -1 || rows.length < 2) return;
+
+  // Distanza tra una riga e la successiva (altezza + spazio)
+  const step = rows[1].getBoundingClientRect().top - rows[0].getBoundingClientRect().top;
+  if (!(step > 0)) return;
+
+  e.preventDefault();
+  if (handle.setPointerCapture) {
+    try { handle.setPointerCapture(e.pointerId); } catch (err) { /* non è un problema */ }
+  }
+
+  favDrag = {
+    row, rows, from, to: from, step,
+    pointerId: e.pointerId,
+    startY: e.clientY,
+    lastY: e.clientY,
+    startScroll: mainEl.scrollTop,
+    raf: 0,
+  };
+  row.classList.add("dragging");
+  favListEl.classList.add("is-sorting");
+
+  window.addEventListener("pointermove", onFavPointerMove);
+  window.addEventListener("pointerup", onFavPointerUp);
+  window.addEventListener("pointercancel", onFavPointerCancel);
+  favDrag.raf = requestAnimationFrame(favDragTick);
+}
+
+function onFavPointerMove(e) {
+  if (!favDrag || e.pointerId !== favDrag.pointerId) return;
+  favDrag.lastY = e.clientY;
+}
+
+function onFavPointerUp(e) { endFavDrag(e, false); }
+function onFavPointerCancel(e) { endFavDrag(e, true); }
+
+// Ad ogni fotogramma: la riga trascinata segue il dito e le altre si fanno da parte
+function favDragTick() {
+  if (!favDrag) return;
+  const d = favDrag;
+
+  // Se il dito arriva vicino al bordo alto/basso, la pagina scorre da sola
+  const box = mainEl.getBoundingClientRect();
+  const edge = 70;
+  if (d.lastY < box.top + edge) {
+    mainEl.scrollTop -= 10;
+  } else if (d.lastY > box.bottom - edge) {
+    mainEl.scrollTop += 10;
+  }
+
+  const n = d.rows.length;
+  let dy = d.lastY - d.startY + (mainEl.scrollTop - d.startScroll);
+  dy = Math.max(-d.from * d.step, Math.min((n - 1 - d.from) * d.step, dy));
+  d.row.style.transform = `translateY(${dy}px)`;
+
+  const to = Math.max(0, Math.min(n - 1, Math.round(d.from + dy / d.step)));
+  d.to = to;
+
+  d.rows.forEach((r, i) => {
+    if (r === d.row) return;
+    let shift = 0;
+    if (d.from < to && i > d.from && i <= to) shift = -d.step;
+    else if (d.from > to && i >= to && i < d.from) shift = d.step;
+    r.style.transform = shift ? `translateY(${shift}px)` : "";
+  });
+
+  d.raf = requestAnimationFrame(favDragTick);
+}
+
+function endFavDrag(e, cancelled) {
+  if (!favDrag || (e && e.pointerId !== favDrag.pointerId)) return;
+  const d = favDrag;
+  favDrag = null;
+
+  cancelAnimationFrame(d.raf);
+  window.removeEventListener("pointermove", onFavPointerMove);
+  window.removeEventListener("pointerup", onFavPointerUp);
+  window.removeEventListener("pointercancel", onFavPointerCancel);
+
+  favListEl.classList.remove("is-sorting");
+  d.rows.forEach((r) => {
+    r.style.transform = "";
+    r.classList.remove("dragging");
+  });
+
+  if (!cancelled && d.to !== d.from) {
+    const ids = d.rows.map((r) => r.dataset.songId);
+    const [moved] = ids.splice(d.from, 1);
+    ids.splice(d.to, 0, moved);
+    setFavoriteOrder(ids); // salva subito il nuovo ordine sul dispositivo
+  }
+  renderFavorites();
+}
+
+favListEl.addEventListener("pointerdown", onFavPointerDown);
+
 /* ---------------- Player ---------------- */
 
-function playByQueueIndex(index) {
-  const queue = getQueue();
-  if (index < 0 || index >= queue.length) return;
+function safePlay() {
+  const p = audioEl.play();
+  if (p && typeof p.catch === "function") {
+    p.catch(() => {
+      // L'autoplay potrebbe essere bloccato dal browser finché l'utente
+      // non interagisce con la pagina: non è un errore bloccante.
+    });
+  }
+}
 
-  currentIndex = index;
-  const song = queue[index];
+// "context" dice da quale lista parte il brano ("home" o "favorites"):
+// serve a far funzionare bene successivo/precedente.
+function playSong(song, context) {
+  if (context) playContext = context;
   currentSong = song;
 
   audioEl.src = song.audio;
-  audioEl.play().catch(() => {
-    // L'autoplay potrebbe essere bloccato dal browser finché l'utente
-    // non interagisce con la pagina: non è un errore bloccante.
-  });
+  safePlay();
 
   // Aggiorna sia la mini-barra in basso sia il pannello a tendina (se aperto
   // o no, resta sempre sincronizzato col brano corrente), come richiesto:
@@ -275,13 +872,20 @@ function playByQueueIndex(index) {
 
   npExpandBtn.disabled = false;
 
+  syncLikeButtons();
   highlightPlayingCard();
+}
+
+function playByQueueIndex(index) {
+  const queue = getQueue();
+  if (index < 0 || index >= queue.length) return;
+  playSong(queue[index]);
 }
 
 /* ---------------- Menu a tendina (pannello "in riproduzione") ---------------- */
 
 function openPanel() {
-  if (currentIndex === -1) return;
+  if (!currentSong) return;
   panelOpen = true;
   npPanel.classList.add("is-open");
   npPanel.setAttribute("aria-hidden", "false");
@@ -307,28 +911,33 @@ function togglePanel() {
   }
 }
 
-// Cliccare un brano (card o hero): riproduce E apre il menu a tendina
-// con la sua cover, come richiesto.
-function openNowPlaying(index) {
-  playByQueueIndex(index);
+// Cliccare un brano (card, riga dei preferiti o hero): riproduce E apre il
+// menu a tendina con la sua cover, come richiesto.
+function openNowPlaying(song, context) {
+  playSong(song, context);
   openPanel();
 }
 
 npExpandBtn.addEventListener("click", togglePanel);
 npOpenTrigger.addEventListener("click", () => {
-  if (currentIndex !== -1) togglePanel();
+  if (currentSong) togglePanel();
 });
 npPanelCloseBtn.addEventListener("click", closePanel);
 npBackdrop.addEventListener("click", closePanel);
 
 function togglePlayPause() {
-  if (currentIndex === -1) {
-    // Nessun brano ancora scelto: parte dal primo della coda
+  if (!currentSong) {
+    // Nessun brano ancora scelto: parte dal primo della lista che stai guardando
+    if (currentView === "favorites" && getFavoriteSongs().length) {
+      playContext = "favorites";
+    } else {
+      playContext = "home";
+    }
     playByQueueIndex(0);
     return;
   }
   if (audioEl.paused) {
-    audioEl.play();
+    safePlay();
   } else {
     audioEl.pause();
   }
@@ -337,15 +946,16 @@ function togglePlayPause() {
 function playNext() {
   const queue = getQueue();
   if (!queue.length) return;
-  const next = (currentIndex + 1) % queue.length;
-  playByQueueIndex(next);
+  const i = getCurrentIndex();
+  // Se il brano non è più nella lista (es. tolto dai preferiti) si riparte dall'inizio
+  playByQueueIndex(i === -1 ? 0 : (i + 1) % queue.length);
 }
 
 function playPrev() {
   const queue = getQueue();
   if (!queue.length) return;
-  const prev = (currentIndex - 1 + queue.length) % queue.length;
-  playByQueueIndex(prev);
+  const i = getCurrentIndex();
+  playByQueueIndex(i === -1 ? queue.length - 1 : (i - 1 + queue.length) % queue.length);
 }
 
 audioEl.addEventListener("play", () => {
@@ -365,7 +975,7 @@ audioEl.addEventListener("pause", () => {
 });
 
 // Selezione automatica del brano successivo quando quello attuale finisce
-// (il pannello, se aperto, si aggiorna già da solo tramite playByQueueIndex)
+// (il pannello, se aperto, si aggiorna già da solo tramite playSong)
 audioEl.addEventListener("ended", playNext);
 
 audioEl.addEventListener("loadedmetadata", () => {
@@ -427,6 +1037,16 @@ function showUnlockMessage(text, type) {
   messageEl.className = "unlock-message " + type;
 }
 
+// I brani senza data si vedono solo nell'ordine alfabetico (vedi config.js):
+// se ne hai appena sbloccato uno e non lo vedi, il messaggio spiega dove trovarlo.
+function hiddenSongsNote(songs) {
+  const hidden = songs.filter((s) => isHiddenInOrder(s, sortOrder));
+  if (!hidden.length) return "";
+  return hidden.length === 1
+    ? " Non ha una data: lo trovi nell'ordine alfabetico."
+    : ` ${hidden.length} di questi non hanno una data: li trovi nell'ordine alfabetico.`;
+}
+
 function handleUnlockSubmit(e) {
   e.preventDefault();
   const input = document.getElementById("unlock-input");
@@ -453,7 +1073,7 @@ function handleUnlockSubmit(e) {
     refreshAfterUnlock();
     showUnlockMessage(
       nuovi.length
-        ? `Hai sbloccato tutti i brani nascosti (${nuovi.length} nuovi)!`
+        ? `Hai sbloccato tutti i brani nascosti (${nuovi.length} nuovi)!${hiddenSongsNote(nuovi)}`
         : "Hai già sbloccato tutti i brani nascosti!",
       "ok"
     );
@@ -484,31 +1104,44 @@ function handleUnlockSubmit(e) {
   refreshAfterUnlock();
 
   showUnlockMessage(
-    nuovi.length === 1
+    (nuovi.length === 1
       ? `Hai sbloccato "${nuovi[0].title}"!`
-      : `Hai sbloccato ${nuovi.length} brani: ${nuovi.map((s) => `"${s.title}"`).join(", ")}!`,
+      : `Hai sbloccato ${nuovi.length} brani: ${nuovi.map((s) => `"${s.title}"`).join(", ")}!`) +
+      hiddenSongsNote(nuovi),
     "ok"
   );
 }
 
-// Dopo uno sblocco la coda cambia: l'indice del brano in riproduzione
-// va ricalcolato, altrimenti "successivo/precedente" sbaglierebbe brano.
+// Dopo uno sblocco la lista cambia: si ridisegna tutto.
+// (La posizione nella coda si ricalcola da sola: vedi getCurrentIndex.)
 function refreshAfterUnlock() {
-  const playingSong = currentSong;
   renderGrid();
   renderHero();
-  if (playingSong) {
-    const i = getQueue().findIndex((s) => s.id === playingSong.id);
-    if (i !== -1) {
-      currentIndex = i;
-      highlightPlayingCard();
-    }
-  }
+  renderFavorites();
 }
 
 document.getElementById("unlock-form").addEventListener("submit", handleUnlockSubmit);
 
+/* ---------------- Più schede aperte: tutto resta allineato ---------------- */
+
+window.addEventListener("storage", (e) => {
+  if (e.key === FAVORITES_KEY) {
+    favoriteIds = readFavoriteIds();
+    onFavoritesChanged();
+  } else if (e.key === SORT_KEY) {
+    sortOrder = readSortOrder();
+    updateSortUI();
+    renderGrid();
+  } else if (e.key === STORAGE_KEY) {
+    unlockedIds = new Set(readUnlockedIds());
+    refreshAfterUnlock();
+  }
+});
+
 /* ---------------- Avvio ---------------- */
 
+updateSortUI();
 renderHero();
 renderGrid();
+renderFavorites();
+setView("home");

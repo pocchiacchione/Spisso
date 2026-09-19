@@ -604,6 +604,334 @@ input[type="range"]:hover::-webkit-slider-thumb{ background: var(--green); }
   font-size: 1.2rem;
 }
 
+/* ---------- Attributo hidden sempre rispettato ---------- */
+
+[hidden]{ display:none !important; }
+
+/* ---------- Voce "Preferiti" nella sidebar + schede in alto (telefono) ---------- */
+
+.nav-count{
+  margin-left:auto;
+  font-size: 0.78rem;
+  font-weight:600;
+  color: var(--text-dim);
+}
+.nav-count:empty{ display:none; }
+
+.view-tabs{
+  display:none; /* su schermi piccoli la sidebar sparisce: qui compaiono le schede */
+  gap: 6px;
+  margin-left: 12px;
+}
+.view-tab{
+  background: rgba(255,255,255,0.08);
+  color: var(--text);
+  border:none;
+  border-radius: 16px;
+  padding: 7px 14px;
+  font-weight:600;
+  font-size: 0.85rem;
+  cursor:pointer;
+  transition: background 0.15s ease;
+}
+.view-tab:hover{ background: rgba(255,255,255,0.16); }
+.view-tab.active{ background: var(--text); color:#000; }
+.view-tab-count:not(:empty)::before{ content:"("; }
+.view-tab-count:not(:empty)::after{ content:")"; }
+
+/* ---------- Intestazione "Tutti i brani" + bottone Ordina ---------- */
+
+.section-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  flex-wrap:wrap;
+  margin: 8px 0 20px;
+}
+.section-head .section-title{ margin: 0; }
+
+.sort-menu{ position: relative; }
+
+.sort-btn{
+  display:inline-flex;
+  align-items:center;
+  gap: 8px;
+  background: var(--panel-light);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  font-weight:600;
+  cursor:pointer;
+  transition: background 0.15s ease;
+}
+.sort-btn:hover,
+.sort-btn[aria-expanded="true"]{ background: var(--panel-hover); }
+.sort-btn-label{ color: var(--text-dim); font-weight:500; }
+.sort-btn-value{ color: var(--green); }
+.sort-btn-caret{ font-size: 0.8rem; transition: transform 0.15s ease; }
+.sort-btn[aria-expanded="true"] .sort-btn-caret{ transform: rotate(180deg); }
+
+.sort-list{
+  position:absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  min-width: 240px;
+  display:flex;
+  flex-direction:column;
+  background: var(--panel-hover);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px;
+  box-shadow: 0 16px 32px rgba(0,0,0,0.5);
+  z-index: 12;
+}
+.sort-option{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 12px;
+  background:none;
+  border:none;
+  color: var(--text);
+  font-size: 0.9rem;
+  text-align:left;
+  padding: 10px 12px;
+  border-radius: 6px;
+  cursor:pointer;
+}
+.sort-option:hover,
+.sort-option:focus-visible{ background: rgba(255,255,255,0.08); }
+.sort-option[aria-checked="true"]{ color: var(--green); font-weight:600; }
+.sort-option[aria-checked="true"]::after{ content:"\2713"; }
+
+/* ---------- Cuore (mi piace) ---------- */
+
+.heart-btn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border:none;
+  border-radius: 50%;
+  background:none;
+  color: var(--text-dim);
+  cursor:pointer;
+  flex-shrink:0;
+  transition: color 0.15s ease, transform 0.12s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.heart-btn svg{
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  pointer-events:none;
+}
+.heart-btn:hover:not(:disabled){ color: var(--text); transform: scale(1.1); }
+.heart-btn.liked{ color: var(--green); }
+.heart-btn.liked:hover:not(:disabled){ color: var(--green); }
+.heart-btn.liked svg{ fill: currentColor; }
+.heart-btn:disabled{ opacity: 0.3; cursor: default; }
+
+/* cuore sopra la copertina dei brani nella griglia */
+.song-card .card-heart{
+  position:absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(0,0,0,0.55);
+  color: var(--text);
+  opacity: 0;
+  transform: scale(0.9);
+}
+.song-card:hover .card-heart,
+.song-card .card-heart.liked,
+.song-card .card-heart:focus-visible{ opacity: 1; transform: none; }
+.song-card .card-heart:hover:not(:disabled){ transform: scale(1.1); }
+.song-card .card-heart.liked{ color: var(--green); }
+@media (hover: none){
+  .song-card .card-heart{ opacity: 1; transform: none; }
+}
+
+/* cuore nella mini-barra e nel pannello a tendina */
+.np-heart{ margin-left: 4px; }
+.np-panel-actions{ margin: -8px 0 14px; }
+.np-panel-heart{ width: 42px; height: 42px; }
+.np-panel-heart svg{ width: 26px; height: 26px; }
+
+/* ---------- Vista "Preferiti" ---------- */
+
+.fav-header{
+  display:flex;
+  align-items:center;
+  gap: 22px;
+  flex-wrap:wrap;
+  padding: 28px 8px 18px;
+}
+.fav-badge{
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background: linear-gradient(135deg, #24e56a 0%, #0f6a35 100%);
+  box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+  flex-shrink:0;
+}
+.fav-badge svg{ width: 46px; height: 46px; fill:#fff; }
+.fav-header-text{ flex:1; min-width: 200px; }
+.fav-heading{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: clamp(1.6rem, 3.6vw, 2.6rem);
+  margin: 0 0 6px;
+  letter-spacing: -0.01em;
+}
+.fav-count{ margin: 0; color: var(--text-dim); font-size: 0.9rem; }
+
+.fav-hint{
+  margin: 0 8px 14px;
+  color: var(--text-dim);
+  font-size: 0.82rem;
+}
+
+.fav-list{
+  list-style:none;
+  margin: 0;
+  padding: 0;
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
+}
+
+.fav-row{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  height: 64px;
+  padding: 0 10px;
+  background: var(--panel-light);
+  border-radius: 10px;
+  cursor:pointer;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-touch-callout:none;
+  transition: background 0.15s ease;
+}
+.fav-row:hover{ background: var(--panel-hover); }
+.fav-row.playing{ outline: 1px solid var(--green); background: var(--panel-hover); }
+.fav-row.playing .fav-row-title{ color: var(--green); }
+
+/* durante il trascinamento le altre righe scivolano al loro posto */
+.fav-list.is-sorting .fav-row:not(.dragging){ transition: transform 0.15s ease, background 0.15s ease; }
+.fav-row.dragging{
+  position:relative;
+  z-index: 3;
+  background: var(--panel-hover);
+  outline: 1px solid var(--green);
+  box-shadow: 0 12px 26px rgba(0,0,0,0.6);
+  cursor: grabbing;
+  transition: none;
+}
+
+.fav-handle{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width: 30px;
+  height: 44px;
+  padding: 0;
+  border:none;
+  background:none;
+  color: var(--text-dim);
+  cursor: grab;
+  touch-action: none; /* il dito trascina la riga invece di scorrere la pagina */
+  flex-shrink:0;
+}
+.fav-handle:hover{ color: var(--text); }
+.fav-handle svg{ width: 14px; height: 20px; fill: currentColor; pointer-events:none; }
+.fav-row.dragging .fav-handle{ cursor: grabbing; color: var(--green); }
+
+.fav-pos{
+  min-width: 22px;
+  text-align:center;
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.fav-main{
+  flex:1;
+  min-width:0;
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  background:none;
+  border:none;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align:left;
+  cursor:pointer;
+}
+.fav-cover{
+  width: 46px;
+  height: 46px;
+  border-radius: 4px;
+  object-fit: cover;
+  background: var(--panel-hover);
+  flex-shrink:0;
+}
+.fav-info{ min-width:0; display:flex; flex-direction:column; gap: 2px; }
+.fav-row-title{
+  font-weight:600;
+  font-size: 0.95rem;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.fav-row-sub{
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  min-height: 1.2em;
+}
+
+.fav-actions{ display:flex; align-items:center; gap: 2px; flex-shrink:0; }
+.fav-move{
+  width: 30px;
+  height: 34px;
+  border:none;
+  border-radius: 6px;
+  background:none;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+  cursor:pointer;
+  transition: color 0.12s ease, background 0.12s ease;
+}
+.fav-move:hover:not(:disabled){ color: var(--text); background: rgba(255,255,255,0.08); }
+.fav-move:disabled{ opacity: 0.25; cursor: default; }
+
+.fav-empty{
+  text-align:center;
+  padding: 48px 16px;
+  color: var(--text-dim);
+  font-size: 0.9rem;
+}
+.fav-empty p{ margin: 0 0 6px; }
+.fav-empty .fav-empty-title{
+  font-family:'Space Grotesk', sans-serif;
+  font-size: 1.15rem;
+  color: var(--text);
+}
+
 /* ---------- Responsive ---------- */
 
 @media (max-width: 860px){
@@ -615,6 +943,23 @@ input[type="range"]:hover::-webkit-slider-thumb{ background: var(--green); }
   .song-grid{ grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; }
   .np-panel{ top: 0; border-radius: 0 0 16px 16px; padding: 16px 18px 22px; }
   .np-panel-cover-disc{ width: 160px; height: 160px; }
+  .view-tabs{ display:flex; }
+  .content{ padding-bottom: 96px; } /* lascia spazio sopra il player, che su telefono è più alto */
+  .fav-header{ gap: 16px; padding-top: 16px; }
+  .fav-badge{ width: 72px; height: 72px; }
+  .fav-badge svg{ width: 34px; height: 34px; }
+  .fav-pos{ display:none; }
+}
+
+/* ---------- Telefoni stretti: righe dei preferiti più compatte ---------- */
+
+@media (max-width: 480px){
+  .fav-row{ gap: 8px; padding: 0 6px 0 2px; }
+  .fav-handle{ width: 26px; }
+  .fav-main{ gap: 10px; }
+  .fav-cover{ width: 40px; height: 40px; }
+  .fav-move{ width: 26px; }
+  .fav-actions .heart-btn{ width: 32px; }
 }
 
 /* ---------- Grandi schermi da computer ---------- */
@@ -632,7 +977,7 @@ input[type="range"]:hover::-webkit-slider-thumb{ background: var(--green); }
 /* ---------- Accessibilità: rispetta le preferenze di movimento ridotto ---------- */
 
 @media (prefers-reduced-motion: reduce){
-  .np-panel, .np-backdrop, .np-panel-cover-disc, .np-expand .chevron{
+  .np-panel, .np-backdrop, .np-panel-cover-disc, .np-expand .chevron, .fav-list.is-sorting .fav-row{
     transition: none !important;
     animation: none !important;
   }

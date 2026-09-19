@@ -26,3 +26,12 @@ const UNLOCK_STOP_WORDS = [
 // Codice speciale che sblocca TUTTI i brani in una volta.
 // Metti null se non lo vuoi.
 const MASTER_UNLOCK_CODE = "piocheddar";
+
+// --- Ordine dei brani nella schermata principale ----------------------
+// I brani il cui file audio NON ha la data nel nome (es. "Fa Schifo Tutto.mp3")
+// non hanno una posizione nel tempo, quindi non si possono mettere in ordine
+// cronologico.
+//   true  -> compaiono SOLO con l'ordine alfabetico (scompaiono da
+//            "cronologico" e "cronologico inverso")
+//   false -> compaiono sempre, in fondo alla lista negli ordini cronologici
+const UNDATED_ONLY_IN_ALPHABETICAL = true;
