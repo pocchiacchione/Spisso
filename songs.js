@@ -9,6 +9,22 @@
 
 const SONGS = [
   {
+    "id": "public-ludo-e-fede-3-23122025",
+    "title": "Ludo e Fede 3",
+    "date": "2025-12-23",
+    "author": null,
+    "audio": "audio/public/23-12-2025 - Ludo e Fede 3.mp3",
+    "cover": "covers/public/Ludo e Fede 3.png"
+  },
+  {
+    "id": "public-suca-sbost-24122025",
+    "title": "Suca Sbost",
+    "date": "2025-12-24",
+    "author": null,
+    "audio": "audio/public/24-12-2025 - Suca Sbost.mp3",
+    "cover": "covers/public/Suca Sbost.png"
+  },
+  {
     "id": "public-ludo-e-fede-4-05042026",
     "title": "Ludo e Fede 4",
     "date": "2026-04-05",
@@ -55,22 +71,6 @@ const SONGS = [
     "author": null,
     "audio": "audio/public/13-08-2026 - Peter a Colazione.mp3",
     "cover": "covers/default-cover.svg"
-  },
-  {
-    "id": "public-ludo-e-fede-3-23122026",
-    "title": "Ludo e Fede 3",
-    "date": "2026-12-23",
-    "author": null,
-    "audio": "audio/public/23-12-2026 - Ludo e Fede 3.mp3",
-    "cover": "covers/public/Ludo e Fede 3.png"
-  },
-  {
-    "id": "public-suca-sbost-24122026",
-    "title": "Suca Sbost",
-    "date": "2026-12-24",
-    "author": null,
-    "audio": "audio/public/24-12-2026 - Suca Sbost.mp3",
-    "cover": "covers/public/Suca Sbost.png"
   },
   {
     "id": "public-20-10-2024-ludo-e-fede",
