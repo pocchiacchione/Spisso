@@ -81,6 +81,14 @@ const SONGS = [
     "cover": "covers/default-cover.svg"
   },
   {
+    "id": "public-stay-spix-19092026",
+    "title": "Stay Spix",
+    "date": "2026-09-19",
+    "author": "pocchiacchione",
+    "audio": "audio/public/19-09-2026 - Stay Spix - pocchiacchione.mp3",
+    "cover": "covers/default-cover.svg"
+  },
+  {
     "id": "public-fa-schifo-tutto",
     "title": "Fa Schifo Tutto",
     "date": null,
