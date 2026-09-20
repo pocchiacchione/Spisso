@@ -9,6 +9,14 @@
 
 const SONGS = [
   {
+    "id": "public-ludo-e-fede-20102024",
+    "title": "Ludo e Fede",
+    "date": "2024-10-20",
+    "author": "pocchiacchione",
+    "audio": "audio/public/20-10-2024 - Ludo e Fede - pocchiacchione.mp3",
+    "cover": "covers/public/Ludo e Fede 3.png"
+  },
+  {
     "id": "public-ludo-e-fede-3-23122025",
     "title": "Ludo e Fede 3",
     "date": "2025-12-23",
@@ -70,14 +78,6 @@ const SONGS = [
     "date": "2026-08-13",
     "author": null,
     "audio": "audio/public/13-08-2026 - Peter a Colazione.mp3",
-    "cover": "covers/default-cover.svg"
-  },
-  {
-    "id": "public-20-10-2024-ludo-e-fede",
-    "title": "20-10-2024 Ludo e Fede",
-    "date": null,
-    "author": null,
-    "audio": "audio/public/20-10-2024 Ludo e Fede.mp3",
     "cover": "covers/default-cover.svg"
   },
   {
