@@ -89,6 +89,14 @@ const SONGS = [
     "cover": "covers/default-cover.svg"
   },
   {
+    "id": "public-02-04-2025-ludo-e-fede",
+    "title": "02-04-2025 Ludo e Fede",
+    "date": null,
+    "author": "pocchiacchione 2",
+    "audio": "audio/public/02-04-2025 Ludo e Fede - pocchiacchione 2.mp3",
+    "cover": "covers/default-cover.svg"
+  },
+  {
     "id": "public-fa-schifo-tutto",
     "title": "Fa Schifo Tutto",
     "date": null,
