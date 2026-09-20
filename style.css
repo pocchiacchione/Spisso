@@ -62,6 +62,12 @@ input:focus-visible{
   padding: 0 6px;
 }
 
+.brand-logo{
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
 .brand-name{
   font-family:'Space Grotesk', sans-serif;
   font-weight:700;
