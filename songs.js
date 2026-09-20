@@ -73,6 +73,14 @@ const SONGS = [
     "cover": "covers/public/Suca Sbost.png"
   },
   {
+    "id": "public-20-10-2024-ludo-e-fede",
+    "title": "20-10-2024 Ludo e Fede",
+    "date": null,
+    "author": null,
+    "audio": "audio/public/20-10-2024 Ludo e Fede.mp3",
+    "cover": "covers/default-cover.svg"
+  },
+  {
     "id": "public-fa-schifo-tutto",
     "title": "Fa Schifo Tutto",
     "date": null,
