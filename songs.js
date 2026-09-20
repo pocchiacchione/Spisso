@@ -17,6 +17,14 @@ const SONGS = [
     "cover": "covers/public/Ludo e Fede 3.png"
   },
   {
+    "id": "public-ludo-e-fede-2-02042025",
+    "title": "Ludo e Fede 2",
+    "date": "2025-04-02",
+    "author": "pocchiacchione",
+    "audio": "audio/public/02-04-2025 - Ludo e Fede 2 - pocchiacchione.mp3",
+    "cover": "covers/public/Ludo e Fede 3.png"
+  },
+  {
     "id": "public-ludo-e-fede-3-23122025",
     "title": "Ludo e Fede 3",
     "date": "2025-12-23",
@@ -70,7 +78,7 @@ const SONGS = [
     "date": "2026-08-13",
     "author": null,
     "audio": "audio/public/13-08-2026 - Colazione da Ender.mp3",
-    "cover": "covers/default-cover.svg"
+    "cover": "covers/public/Colazione da Ender.png"
   },
   {
     "id": "public-peter-a-colazione-13082026",
@@ -86,14 +94,6 @@ const SONGS = [
     "date": "2026-09-19",
     "author": "pocchiacchione",
     "audio": "audio/public/19-09-2026 - Stay Spix - pocchiacchione.mp3",
-    "cover": "covers/default-cover.svg"
-  },
-  {
-    "id": "public-02-04-2025-ludo-e-fede",
-    "title": "02-04-2025 Ludo e Fede",
-    "date": null,
-    "author": "pocchiacchione 2",
-    "audio": "audio/public/02-04-2025 Ludo e Fede - pocchiacchione 2.mp3",
     "cover": "covers/default-cover.svg"
   },
   {
