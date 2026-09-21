@@ -214,17 +214,13 @@
   </div>
 </footer>
 
-<!-- Pubblicità: video a comparsa ogni tot canzoni -->
+<!-- Pubblicità: il video occupa tutto lo schermo e blocca il resto -->
 <div class="ad-overlay" id="ad-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Pubblicità">
-  <div class="ad-box">
-    <video id="ad-video" class="ad-video" playsinline></video>
-    <div class="ad-toolbar">
-      <span class="ad-tag">Pubblicità</span>
-      <div class="ad-toolbar-actions">
-        <button type="button" class="ad-btn ad-btn-ghost" id="ad-disable-btn">Disabilita pubblicità</button>
-        <button type="button" class="ad-btn ad-btn-skip" id="ad-skip-btn">Salta pubblicità</button>
-      </div>
-    </div>
+  <span class="ad-tag">Pubblicità</span>
+  <video id="ad-video" class="ad-video" playsinline></video>
+  <div class="ad-actions">
+    <button type="button" class="ad-btn ad-btn-ghost" id="ad-disable-btn">Disabilita pubblicità</button>
+    <button type="button" class="ad-btn ad-btn-skip" id="ad-skip-btn">Salta pubblicità</button>
   </div>
 </div>
 

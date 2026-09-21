@@ -972,6 +972,21 @@ function playByQueueIndex(index) {
 
 /* ---------------- Pubblicità: video a comparsa ogni tot canzoni ---------------- */
 
+// Blocca tutti i comandi del player mentre gira la pubblicità (non si può
+// mettere in pausa, cambiare brano o spostarsi nel tempo).
+function lockPlayerControls() {
+  [playBtn, prevBtn, nextBtn, seekBar, npPanelPlayBtn, npPanelPrevBtn, npPanelNextBtn, npPanelSeek]
+    .forEach((el) => { if (el) el.disabled = true; });
+  document.body.classList.add("ad-locked");
+}
+
+// Rimette i permessi di spostarsi/comandare il player, a pubblicità finita.
+function unlockPlayerControls() {
+  [playBtn, prevBtn, nextBtn, seekBar, npPanelPlayBtn, npPanelPrevBtn, npPanelNextBtn, npPanelSeek]
+    .forEach((el) => { if (el) el.disabled = false; });
+  document.body.classList.remove("ad-locked");
+}
+
 function pickAdVideo() {
   if (typeof AD_VIDEOS === "undefined" || !Array.isArray(AD_VIDEOS) || !AD_VIDEOS.length) return null;
   return AD_VIDEOS[Math.floor(Math.random() * AD_VIDEOS.length)];
@@ -992,6 +1007,7 @@ function openAdOverlay(song, context) {
   adMaxTime = 0;
 
   audioEl.pause();
+  lockPlayerControls();
 
   adVideo.src = ad.src;
   adVideo.currentTime = 0;
@@ -1008,6 +1024,7 @@ function closeAdOverlay() {
   adPlaying = false;
   adOverlay.classList.remove("is-open");
   adOverlay.setAttribute("aria-hidden", "true");
+  unlockPlayerControls();
 
   adVideo.pause();
   adVideo.removeAttribute("src");
