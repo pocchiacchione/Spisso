@@ -9,7 +9,7 @@
 // mai toccarlo a mano, ma se un giorno l'app sembra bloccata su una
 // versione vecchia, basta cambiare questo numero (es. da v1 a v2) e
 // rifare il push: forza tutti i dispositivi a scaricare tutto di nuovo.
-const CACHE_VERSION = 'spisso-v1';
+const CACHE_VERSION = 'spisso-v2';
 
 const CORE_ASSETS = [
   './',

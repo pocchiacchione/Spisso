@@ -1062,6 +1062,10 @@ adVideo.addEventListener("seeking", () => {
 // Quando il video finisce da solo, si comporta come se fosse stato saltato.
 adVideo.addEventListener("ended", closeAdOverlay);
 
+// Se il video non riesce a caricarsi (file mancante, errore di rete, ecc.)
+// non deve restare tutto bloccato: si salta la pubblicità da sola.
+adVideo.addEventListener("error", closeAdOverlay);
+
 // Si può saltare la pubblicità subito, appena compare.
 adSkipBtn.addEventListener("click", closeAdOverlay);
 
