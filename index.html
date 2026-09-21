@@ -36,6 +36,9 @@
         <span class="nav-icon">&#9829;</span> Preferiti
         <span class="nav-count" id="nav-fav-count"></span>
       </a>
+      <a href="#" class="nav-item" data-view="settings">
+        <span class="nav-icon">&#9881;</span> Impostazioni
+      </a>
     </nav>
 
     <div class="sidebar-block library-block">
@@ -63,6 +66,7 @@
       <div class="view-tabs" role="tablist" aria-label="Sezioni">
         <button type="button" class="view-tab active" data-view="home" role="tab" aria-selected="true">Home</button>
         <button type="button" class="view-tab" data-view="favorites" role="tab" aria-selected="false">&#9829; Preferiti <span class="view-tab-count" id="tab-fav-count"></span></button>
+        <button type="button" class="view-tab" data-view="settings" role="tab" aria-selected="false">&#9881; Impostazioni</button>
       </div>
     </header>
 
@@ -116,6 +120,25 @@
         <div class="fav-empty" id="fav-empty" hidden>
           <p class="fav-empty-title">Non hai ancora nessun brano preferito</p>
           <p>Tocca il cuore su un brano per aggiungerlo qui: i brani restano nell'ordine in cui li hai messi.</p>
+        </div>
+      </div>
+
+      <!-- ===== Vista IMPOSTAZIONI ===== -->
+      <div id="view-settings" hidden>
+        <div class="section-head">
+          <h2 class="section-title">Impostazioni</h2>
+        </div>
+
+        <div class="settings-card">
+          <div class="settings-row">
+            <div class="settings-row-text">
+              <h3>Pubblicità</h3>
+              <p id="settings-ads-desc">—</p>
+            </div>
+            <button type="button" class="settings-toggle" id="settings-ads-toggle" role="switch" aria-checked="true" aria-label="Attiva o disattiva le pubblicità">
+              <span class="settings-toggle-knob"></span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -190,6 +213,20 @@
     <input type="range" id="volume-bar" min="0" max="100" value="80">
   </div>
 </footer>
+
+<!-- Pubblicità: video a comparsa ogni tot canzoni -->
+<div class="ad-overlay" id="ad-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-label="Pubblicità">
+  <div class="ad-box">
+    <video id="ad-video" class="ad-video" playsinline></video>
+    <div class="ad-toolbar">
+      <span class="ad-tag">Pubblicità</span>
+      <div class="ad-toolbar-actions">
+        <button type="button" class="ad-btn ad-btn-ghost" id="ad-disable-btn">Disabilita pubblicità</button>
+        <button type="button" class="ad-btn ad-btn-skip" id="ad-skip-btn">Salta pubblicità</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <audio id="audio-el" preload="metadata"></audio>
 

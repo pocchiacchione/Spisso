@@ -35,3 +35,17 @@ const MASTER_UNLOCK_CODE = "piocheddar";
 //            "cronologico" e "cronologico inverso")
 //   false -> compaiono sempre, in fondo alla lista negli ordini cronologici
 const UNDATED_ONLY_IN_ALPHABETICAL = true;
+
+// --- Pubblicità ---------------------------------------------------------
+// Ogni quante canzoni ascoltate (circa) compare un video pubblicitario
+// prima del brano successivo. Si può disattivare da Impostazioni nel sito
+// (nella sidebar): lì si trova anche l'interruttore per riattivarle.
+const AD_EVERY_N_SONGS = 10;
+
+// Video pubblicitari: ad ogni pubblicità ne viene scelto uno a caso tra
+// questi. Aggiungerne altri è semplice: basta mettere il file .mp4 nella
+// cartella "ads" e aggiungere una riga qui sotto.
+const AD_VIDEOS = [
+  { src: "ads/pubblicita-1.mp4" },
+  { src: "ads/pubblicita-2.mp4" },
+];

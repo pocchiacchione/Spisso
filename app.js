@@ -13,6 +13,10 @@ const LEGACY_STORAGE_KEY = "spisso_unlocked_count";
 const FAVORITES_KEY = "spisso_favorite_ids";
 // Ordine scelto nella schermata principale: "chrono" | "chrono-desc" | "alpha".
 const SORT_KEY = "spisso_sort_order";
+// Pubblicità: se le hai disattivate da Impostazioni, e quante canzoni sono
+// passate dall'ultima pubblicità (per sapere quando farne comparire una nuova).
+const ADS_DISABLED_KEY = "spisso_ads_disabled";
+const AD_SONG_COUNT_KEY = "spisso_ad_song_count";
 
 // Ogni persona ha la sua playlist perché tutto è salvato nel browser di chi
 // visita il sito (non c'è un account): ogni dispositivo ha i suoi preferiti.
@@ -185,6 +189,49 @@ function writeSortOrder(order) {
 }
 
 let sortOrder = readSortOrder();
+
+/* ---------------- Pubblicità: stato salvato sul dispositivo ---------------- */
+
+function readAdsDisabled() {
+  try {
+    return localStorage.getItem(ADS_DISABLED_KEY) === "1";
+  } catch (err) {
+    return false;
+  }
+}
+
+function writeAdsDisabled(value) {
+  try {
+    localStorage.setItem(ADS_DISABLED_KEY, value ? "1" : "0");
+  } catch (err) {
+    // Salvataggio non possibile: la scelta vale solo per questa sessione.
+  }
+}
+
+function readAdSongCount() {
+  try {
+    const n = parseInt(localStorage.getItem(AD_SONG_COUNT_KEY) || "0", 10);
+    return Number.isFinite(n) && n >= 0 ? n : 0;
+  } catch (err) {
+    return 0;
+  }
+}
+
+function writeAdSongCount(n) {
+  try {
+    localStorage.setItem(AD_SONG_COUNT_KEY, String(n));
+  } catch (err) {
+    // Salvataggio non possibile: il conteggio vale solo per questa sessione.
+  }
+}
+
+// Ogni quante canzoni comparire una pubblicità (vedi config.js); 10 se non impostato.
+function adInterval() {
+  return typeof AD_EVERY_N_SONGS === "number" && AD_EVERY_N_SONGS > 0 ? AD_EVERY_N_SONGS : 10;
+}
+
+let adsDisabled = readAdsDisabled();
+let adSongCount = readAdSongCount();
 
 // Titoli in ordine alfabetico italiano, senza differenza tra maiuscole/minuscole
 // e con i numeri "giusti" (Ludo e Fede 3 prima di Ludo e Fede 10).
@@ -368,11 +415,22 @@ const heroPlayBtn = document.getElementById("hero-play");
 const libraryCountEl = document.getElementById("library-count");
 const mainEl = document.querySelector(".main");
 
-// Viste (Home / Preferiti)
+// Viste (Home / Preferiti / Impostazioni)
 const viewHome = document.getElementById("view-home");
 const viewFavorites = document.getElementById("view-favorites");
+const viewSettings = document.getElementById("view-settings");
 const navFavCount = document.getElementById("nav-fav-count");
 const tabFavCount = document.getElementById("tab-fav-count");
+
+// Impostazioni: interruttore pubblicità
+const settingsAdsToggle = document.getElementById("settings-ads-toggle");
+const settingsAdsDesc = document.getElementById("settings-ads-desc");
+
+// Pubblicità: overlay video
+const adOverlay = document.getElementById("ad-overlay");
+const adVideo = document.getElementById("ad-video");
+const adSkipBtn = document.getElementById("ad-skip-btn");
+const adDisableBtn = document.getElementById("ad-disable-btn");
 
 // Bottone "Ordina"
 const sortMenu = document.getElementById("sort-menu");
@@ -410,6 +468,12 @@ let currentView = "home";
 let seekBeingDragged = false;
 let panelSeekBeingDragged = false;
 let panelOpen = false;
+
+// Pubblicità: se sta girando un video, e il brano che deve partire dopo
+let adPlaying = false;
+let adPendingSong = null;
+let adPendingContext = null;
+let pendingOpenPanel = false; // riapre il menu a tendina dopo la pubblicità, se richiesto
 
 /* ---------------- Cuori (mi piace) ---------------- */
 
@@ -613,11 +677,12 @@ document.addEventListener("keydown", (e) => {
 /* ---------------- Viste: Home / Preferiti ---------------- */
 
 function setView(name) {
-  if (name !== "home" && name !== "favorites") return;
+  if (name !== "home" && name !== "favorites" && name !== "settings") return;
   currentView = name;
 
   viewHome.hidden = name !== "home";
   viewFavorites.hidden = name !== "favorites";
+  viewSettings.hidden = name !== "settings";
 
   document.querySelectorAll("[data-view]").forEach((el) => {
     const active = el.dataset.view === name;
@@ -852,7 +917,30 @@ function safePlay() {
 
 // "context" dice da quale lista parte il brano ("home" o "favorites"):
 // serve a far funzionare bene successivo/precedente.
+//
+// Prima di far partire davvero il brano, controlla se è il momento di
+// mostrare una pubblicità (vedi la sezione "Pubblicità" più sotto): se sì,
+// il brano parte solo dopo che la pubblicità è stata saltata o disattivata.
 function playSong(song, context) {
+  if (adPlaying) return; // mentre gira la pubblicità non si cambia brano
+
+  if (!adsDisabled) {
+    adSongCount++;
+    writeAdSongCount(adSongCount);
+  }
+
+  if (!adsDisabled && adSongCount >= adInterval()) {
+    adSongCount = 0;
+    writeAdSongCount(0);
+    openAdOverlay(song, context);
+    return;
+  }
+
+  startPlayback(song, context);
+}
+
+// La riproduzione vera e propria (quello che prima era tutto il corpo di playSong).
+function startPlayback(song, context) {
   if (context) playContext = context;
   currentSong = song;
 
@@ -881,6 +969,117 @@ function playByQueueIndex(index) {
   if (index < 0 || index >= queue.length) return;
   playSong(queue[index]);
 }
+
+/* ---------------- Pubblicità: video a comparsa ogni tot canzoni ---------------- */
+
+function pickAdVideo() {
+  if (typeof AD_VIDEOS === "undefined" || !Array.isArray(AD_VIDEOS) || !AD_VIDEOS.length) return null;
+  return AD_VIDEOS[Math.floor(Math.random() * AD_VIDEOS.length)];
+}
+
+// Mostra la pubblicità e mette in pausa il brano; "song"/"context" sono ciò
+// che deve partire non appena la pubblicità finisce, viene saltata o disattivata.
+function openAdOverlay(song, context) {
+  const ad = pickAdVideo();
+  if (!ad) {
+    startPlayback(song, context);
+    return;
+  }
+
+  adPlaying = true;
+  adPendingSong = song;
+  adPendingContext = context;
+  adMaxTime = 0;
+
+  audioEl.pause();
+
+  adVideo.src = ad.src;
+  adVideo.currentTime = 0;
+  adVideo.controls = false; // niente barra: il video non si può spostare avanti
+
+  adOverlay.classList.add("is-open");
+  adOverlay.setAttribute("aria-hidden", "false");
+
+  const p = adVideo.play();
+  if (p && typeof p.catch === "function") p.catch(() => {});
+}
+
+function closeAdOverlay() {
+  adPlaying = false;
+  adOverlay.classList.remove("is-open");
+  adOverlay.setAttribute("aria-hidden", "true");
+
+  adVideo.pause();
+  adVideo.removeAttribute("src");
+  adVideo.load();
+
+  const song = adPendingSong;
+  const context = adPendingContext;
+  adPendingSong = null;
+  adPendingContext = null;
+
+  if (song) startPlayback(song, context);
+
+  if (pendingOpenPanel) {
+    pendingOpenPanel = false;
+    openPanel();
+  }
+}
+
+// Il video della pubblicità non si può spostare avanti: se currentTime salta
+// oltre il punto già visto (trascinamento, tasti, ecc.) lo si riporta indietro.
+let adMaxTime = 0;
+adVideo.addEventListener("timeupdate", () => {
+  if (adVideo.currentTime > adMaxTime + 0.5) {
+    adVideo.currentTime = adMaxTime;
+  } else {
+    adMaxTime = adVideo.currentTime;
+  }
+});
+adVideo.addEventListener("seeking", () => {
+  if (adVideo.currentTime > adMaxTime + 0.5) {
+    adVideo.currentTime = adMaxTime;
+  }
+});
+
+// Quando il video finisce da solo, si comporta come se fosse stato saltato.
+adVideo.addEventListener("ended", closeAdOverlay);
+
+// Si può saltare la pubblicità subito, appena compare.
+adSkipBtn.addEventListener("click", closeAdOverlay);
+
+// Disattiva le pubblicità (si riattivano da Impostazioni) e salta questa.
+adDisableBtn.addEventListener("click", () => {
+  setAdsDisabled(true);
+  closeAdOverlay();
+});
+
+/* ---------------- Impostazioni: interruttore pubblicità ---------------- */
+
+function syncAdsSettingsUI() {
+  settingsAdsToggle.classList.toggle("is-on", !adsDisabled);
+  settingsAdsToggle.setAttribute("aria-checked", adsDisabled ? "false" : "true");
+  settingsAdsDesc.textContent = adsDisabled
+    ? "Le pubblicità sono disattivate. Riattivale quando vuoi da qui."
+    : `Ogni ${adInterval()} brani circa appare un breve video pubblicitario prima del successivo.`;
+}
+
+function setAdsDisabled(value) {
+  adsDisabled = value;
+  writeAdsDisabled(value);
+  if (value) {
+    // Riparte da zero: appena riattivate, le pubblicità ricominciano a contare da qui.
+    adSongCount = 0;
+    writeAdSongCount(0);
+  }
+  syncAdsSettingsUI();
+}
+
+settingsAdsToggle.addEventListener("click", () => {
+  setAdsDisabled(!adsDisabled);
+});
+
+syncAdsSettingsUI();
 
 /* ---------------- Menu a tendina (pannello "in riproduzione") ---------------- */
 
@@ -913,9 +1112,14 @@ function togglePanel() {
 
 // Cliccare un brano (card, riga dei preferiti o hero): riproduce E apre il
 // menu a tendina con la sua cover, come richiesto.
+// Se prima parte una pubblicità, il pannello si apre solo a pubblicità finita.
 function openNowPlaying(song, context) {
   playSong(song, context);
-  openPanel();
+  if (adPlaying) {
+    pendingOpenPanel = true;
+  } else {
+    openPanel();
+  }
 }
 
 npExpandBtn.addEventListener("click", togglePanel);
